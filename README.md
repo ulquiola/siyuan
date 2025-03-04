@@ -4,9 +4,7 @@
 - The `S3/WebDAV` synchronization feature can be used without logging in.
 - Use the `root` user instead of the `siyuan` user to adapt to certain NAS systems (e.g., ZSPACE).
 - Change Default Language To `Chinese`.
-- The changes compared to the original version : https://github.com/siyuan-note/siyuan/compare/master...nfe-w:siyuan:dev-nfe-w
-
-[![](https://img.shields.io/badge/DockerHub-nfew/siyuan-367AC7?style=flat-square&logo=Docker&logoColor=white)](https://hub.docker.com/r/nfew/siyuan)
+- The changes compared to the original version : https://github.com/siyuan-note/siyuan/compare/master...ulquiola:siyuan:dev
 
 ### Run the container
 
