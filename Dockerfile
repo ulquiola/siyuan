@@ -36,6 +36,7 @@ RUN apk add --no-cache gcc musl-dev && \
 
 FROM alpine:latest
 LABEL maintainer="Liang Ding<845765@qq.com>"
+LABEL modifier="ulquiola<ulquiola@163.com>"
 
 WORKDIR /opt/siyuan/
 COPY --from=GO_BUILD /opt/siyuan/ /opt/siyuan/
