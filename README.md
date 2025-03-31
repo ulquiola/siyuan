@@ -8,9 +8,12 @@
 ```shell
 docker run -d \
 -p 6806:6806 \
--v /your_path/siyuan:/siyuan/workspace \
+-v ./siyuan:/siyuan/workspace \
+-e LANG=zh_CN.UTF-8 \
+-e LC_ALL=zh_CN.UTF-8 \
 --name siyuan \
-nfew/siyuan:latest \
+--restart always \
+docker.1ms.run/ulquiola/siyuan:latest \
 --workspace=/siyuan/workspace \
 --accessAuthCode=123456
 ```

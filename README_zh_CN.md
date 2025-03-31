@@ -4,18 +4,18 @@
 - 可以不登录使用 `S3/WebDAV` 同步功能
 - 使用 `root` 用户替代 `siyuan` 用户，用于适配部分NAS（例如：极空间）
 - 将默认语言更改为`中文`
-- 相较于原版的改动点：https://github.com/siyuan-note/siyuan/compare/master...nfe-w:siyuan:dev-nfe-w
-
-[![](https://img.shields.io/badge/DockerHub-nfew/siyuan-367AC7?style=flat-square&logo=Docker&logoColor=white)](https://hub.docker.com/r/nfew/siyuan)
 
 ### 运行容器
 
 ```shell
 docker run -d \
 -p 6806:6806 \
--v /your_path/siyuan:/siyuan/workspace \
+-v ./siyuan:/siyuan/workspace \
+-e LANG=zh_CN.UTF-8 \
+-e LC_ALL=zh_CN.UTF-8 \
 --name siyuan \
-nfew/siyuan:latest \
+--restart always \
+docker.1ms.run/ulquiola/siyuan:latest \
 --workspace=/siyuan/workspace \
 --accessAuthCode=123456
 ```
