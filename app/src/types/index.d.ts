@@ -124,6 +124,10 @@ declare namespace CSS {
     const highlights: Map<string, Highlight>;
 }
 
+interface CSSStyleDeclarationElectron extends CSSStyleDeclaration {
+    WebkitAppRegion: string
+}
+
 interface Window {
     echarts: {
         init(element: HTMLElement, theme?: string, options?: {
@@ -204,6 +208,7 @@ interface Window {
         readClipboard(): string
         readHTMLClipboard(): string
         getBlockURL(): string
+        hideKeyboard(): void
     }
     JSHarmony: {
         openExternal(url: string): void
