@@ -110,12 +110,12 @@ export class Background {
         this.element.innerHTML = `<div class="protyle-background__img">
     <img src="${this.transparentData}">
     <div class="protyle-icons">
-        <span class="protyle-icon protyle-icon--first" style="position: relative;overflow: hidden"><input aria-label="${window.siyuan.languages.upload}" class="ariaLabel" data-position="right4bottom" type="file" style="position: absolute;height: 100%;top: 0;right: 0;opacity: .001;overflow: hidden;cursor: pointer;"><svg><use xlink:href="#iconUpload"></use></svg></span>
-        <span class="protyle-icon ariaLabel" data-position="right4bottom" data-type="link" aria-label="${window.siyuan.languages.link}"><svg><use xlink:href="#iconLink"></use></svg></span>
-        <span class="protyle-icon ariaLabel" data-position="right4bottom" data-type="asset" aria-label="${window.siyuan.languages.assets}"><svg><use xlink:href="#iconImage"></use></svg></span>
-        <span class="protyle-icon ariaLabel" data-position="right4bottom" data-type="show-random" aria-label="${window.siyuan.languages.builtIn}"><svg><use xlink:href="#iconRefresh"></use></svg></span>
-        <span class="protyle-icon ariaLabel fn__none" data-position="right4bottom" data-type="position" aria-label="${window.siyuan.languages.dragPosition}"><svg><use xlink:href="#iconMove"></use></svg></span>
-        <span class="protyle-icon protyle-icon--last ariaLabel" data-position="right4bottom" data-type="remove" aria-label="${window.siyuan.languages.remove}"><svg><use xlink:href="#iconTrashcan"></use></svg></span>
+        <span class="protyle-icon protyle-icon--first" style="position: relative;overflow: hidden"><input aria-label="${window.siyuan.languages.upload}" class="ariaLabel" type="file" style="position: absolute;height: 100%;top: 0;right: 0;opacity: .001;overflow: hidden;cursor: pointer;"><svg><use xlink:href="#iconUpload"></use></svg></span>
+        <span class="protyle-icon ariaLabel" data-type="link" aria-label="${window.siyuan.languages.link}"><svg><use xlink:href="#iconLink"></use></svg></span>
+        <span class="protyle-icon ariaLabel" data-type="asset" aria-label="${window.siyuan.languages.assets}"><svg><use xlink:href="#iconImage"></use></svg></span>
+        <span class="protyle-icon ariaLabel" data-type="show-random" aria-label="${window.siyuan.languages.builtIn}"><svg><use xlink:href="#iconRefresh"></use></svg></span>
+        <span class="protyle-icon ariaLabel fn__none" data-type="position" aria-label="${window.siyuan.languages.dragPosition}"><svg><use xlink:href="#iconMove"></use></svg></span>
+        <span class="protyle-icon protyle-icon--last ariaLabel" data-type="remove" aria-label="${window.siyuan.languages.remove}"><svg><use xlink:href="#iconTrashcan"></use></svg></span>
     </div>
     <div class="protyle-icons fn__none"><span class="protyle-icon protyle-icon--text">${window.siyuan.languages.dragPosition}</span></div>
     <div class="protyle-icons fn__none" style="opacity: .86;">
@@ -419,11 +419,15 @@ export class Background {
         });
     }
 
-    private removeTag(protyle: IProtyle) {
+    private removeTag(protyle: IProtyle, cb?: () => void) {
         const tags = this.getTags();
         fetchPost("/api/attr/setBlockAttrs", {
             id: protyle.block.rootID,
             attrs: {"tags": tags.toString()}
+        }, () => {
+            if (cb) {
+                cb();
+            }
         });
         if (tags.length === 0) {
             delete this.ial.tags;
@@ -539,14 +543,13 @@ export class Background {
                     }
                     upDownHint(listElement, event);
                     if (event.key === "Enter") {
-                        const currentElement = listElement.querySelector(".b3-list-item--focus");
-                        if (currentElement) {
-                            this.addTags(currentElement.textContent.trim(), protyle);
-                        } else {
-                            this.addTags(inputElement.value.trim(), protyle);
-                        }
-                        inputElement.value = "";
-                        inputElement.dispatchEvent(new CustomEvent("input"));
+                        const currentElement = listElement.querySelector(".b3-list-item--focus") as HTMLElement;
+                        this.addTags(currentElement ?
+                            (currentElement.dataset.type === "new" ? currentElement.querySelector("mark").textContent.trim() : currentElement.textContent.trim()) :
+                            inputElement.value.trim(), protyle, () => {
+                            inputElement.value = "";
+                            inputElement.dispatchEvent(new CustomEvent("input"));
+                        });
                     } else if (event.key === "Escape") {
                         window.siyuan.menus.menu.remove();
                     }
@@ -554,13 +557,13 @@ export class Background {
                 inputElement.addEventListener("input", (event) => {
                     event.stopPropagation();
                     fetchPost("/api/search/searchTag", {
-                        k: inputElement.value,
+                        k: inputElement.value.trim(),
                     }, (response) => {
                         let searchHTML = "";
                         let hasKey = false;
                         const currentTags = this.getTags();
-                        response.data.tags.forEach((item: string) => {
-                            searchHTML += `<div class="b3-list-item b3-list-item--narrow">
+                        response.data.tags.forEach((item: string, index: number) => {
+                            searchHTML += `<div class="b3-list-item b3-list-item--narrow${index === 0 ? " b3-list-item--focus" : ""}">
     <div class="fn__flex-1">${item}</div>
     ${currentTags.includes(Lute.UnEscapeHTMLStr(item.replace(/<mark>/g, "").replace(/<\/mark>/g, ""))) ? '<svg class="b3-menu__checked"><use xlink:href="#iconSelect"></use></svg>' : ""}
 </div>`;
@@ -569,10 +572,9 @@ export class Background {
                             }
                         });
                         if (!hasKey && response.data.k) {
-                            searchHTML = `<div class="b3-list-item b3-list-item--narrow"><mark>${escapeHtml(response.data.k)}</mark></div>` + searchHTML;
+                            searchHTML = `<div data-type="new" class="b3-list-item b3-list-item--narrow${searchHTML ? "" : " b3-list-item--focus"}"><div class="fn__flex-1">${window.siyuan.languages.new} <mark>${escapeHtml(response.data.k)}</mark></div></div>` + searchHTML;
                         }
                         listElement.innerHTML = searchHTML;
-                        listElement.firstElementChild.classList.add("b3-list-item--focus");
                     });
                 });
                 listElement.addEventListener("click", (event) => {
@@ -581,15 +583,25 @@ export class Background {
                     if (!listItemElement) {
                         return;
                     }
-                    this.addTags(listItemElement.textContent.trim(), protyle);
-                    inputElement.dispatchEvent(new CustomEvent("input"));
+                    this.addTags(listItemElement.dataset.type === "new" ? listItemElement.querySelector("mark").textContent.trim() : listItemElement.textContent.trim(),
+                        protyle, () => {
+                            inputElement.value = "";
+                            inputElement.dispatchEvent(new CustomEvent("input"));
+                            inputElement.focus();
+                        });
                 });
             }
         });
-        menu.element.querySelector(".b3-menu__items").setAttribute("style", "overflow: initial");
+        const itemsElement = menu.element.querySelector(".b3-menu__items");
+        itemsElement.setAttribute("style", "overflow: initial");
+        /// #if MOBILE
+        menu.fullscreen();
+        itemsElement.firstElementChild.setAttribute("style", "padding: 0 8px;height: 100%;");
+        /// #else
         const rect = target.getBoundingClientRect();
         menu.open({x: rect.left, y: rect.top + rect.height});
         menu.element.querySelector("input").focus();
+        /// #endif
     }
 
     private getTags(removeTag?: string) {
@@ -604,16 +616,18 @@ export class Background {
         return tags;
     }
 
-    private addTags(tag: string, protyle: IProtyle) {
+    private addTags(tag: string, protyle: IProtyle, cb: () => void) {
         const tags = this.getTags(tag);
         if (tags.includes(tag)) {
-            this.removeTag(protyle);
+            this.removeTag(protyle, cb);
             return;
         }
         tags.push(tag);
         fetchPost("/api/attr/setBlockAttrs", {
             id: protyle.block.rootID,
             attrs: {"tags": tags.toString()}
+        }, () => {
+            cb();
         });
         this.ial.tags = tags.toString();
         this.render(this.ial, protyle.block.rootID);

@@ -269,7 +269,7 @@ func Export2Liandi(id string) (err error) {
 	title := path.Base(tree.HPath)
 	tags := tree.Root.IALAttr("tags")
 	content := exportMarkdownContent0(tree, util.GetCloudForumAssetsServer()+time.Now().Format("2006/01")+"/siyuan/"+Conf.GetUser().UserId+"/", true,
-		".md", 4, Conf.Export.BlockEmbedMode, Conf.Export.FileAnnotationRefMode,
+		".md", 3, 1, 1,
 		"#", "#",
 		"", "",
 		false, nil, true, &map[string]*parse.Tree{})
@@ -583,10 +583,24 @@ func Preview(id string) (retStdHTML string) {
 	enableLuteInlineSyntax(luteEngine)
 	luteEngine.SetFootnotes(true)
 	addBlockIALNodes(tree, false)
+
+	// 移除超级块的属性列表 https://github.com/siyuan-note/siyuan/issues/13451
+	var unlinks []*ast.Node
+	ast.Walk(tree.Root, func(n *ast.Node, entering bool) ast.WalkStatus {
+		if entering && ast.NodeKramdownBlockIAL == n.Type && nil != n.Previous && ast.NodeSuperBlock == n.Previous.Type {
+			unlinks = append(unlinks, n)
+		}
+		return ast.WalkContinue
+	})
+	for _, unlink := range unlinks {
+		unlink.Unlink()
+	}
+
 	md := treenode.FormatNode(tree.Root, luteEngine)
 	tree = parse.Parse("", []byte(md), luteEngine.ParseOptions)
 	// 使用实际主题样式值替换样式变量 Use real theme style value replace var in preview mode https://github.com/siyuan-note/siyuan/issues/11458
 	fillThemeStyleVar(tree)
+	luteEngine.RenderOptions.ProtyleMarkNetImg = false
 	retStdHTML = luteEngine.ProtylePreview(tree, luteEngine.RenderOptions)
 
 	if footnotesDefBlock := tree.Root.ChildByType(ast.NodeFootnotesDefBlock); nil != footnotesDefBlock {
@@ -1489,11 +1503,6 @@ func ExportNotebookMarkdown(boxID string) (zipPath string) {
 func yfm(docIAL map[string]string) string {
 	// 导出 Markdown 文件时开头附上一些元数据 https://github.com/siyuan-note/siyuan/issues/6880
 
-	if !Conf.Export.MarkdownYFM {
-		// 导出 Markdown 时在文档头添加 YFM 开关 https://github.com/siyuan-note/siyuan/issues/7727
-		return ""
-	}
-
 	buf := bytes.Buffer{}
 	buf.WriteString("---\n")
 	var title, created, updated, tags string
@@ -1958,7 +1967,10 @@ func exportMarkdownContent(id, ext string, exportRefMode int, defBlockIDs []stri
 		Conf.Export.BlockRefTextLeft, Conf.Export.BlockRefTextRight,
 		Conf.Export.AddTitle, defBlockIDs, singleFile, treeCache)
 	docIAL := parse.IAL2Map(tree.Root.KramdownIAL)
-	exportedMd = yfm(docIAL) + exportedMd
+	if Conf.Export.MarkdownYFM {
+		// 导出 Markdown 时在文档头添加 YFM 开关 https://github.com/siyuan-note/siyuan/issues/7727
+		exportedMd = yfm(docIAL) + exportedMd
+	}
 	return
 }
 

@@ -79,7 +79,10 @@ export const genCellValueByElement = (colType: TAVCol, cellElement: HTMLElement)
         if (colType === "block" && textElement.dataset.id) {
             cellValue.block.id = textElement.dataset.id;
             if (textElement.previousElementSibling?.classList.contains("b3-menu__avemoji")) {
-                cellValue.block.icon = textElement.previousElementSibling.getAttribute("data-unicode");
+                const unicode = textElement.previousElementSibling.getAttribute("data-unicode");
+                if (unicode) {
+                    cellValue.block.icon = unicode;
+                }
             }
         }
     } else if (colType === "mSelect" || colType === "select") {
@@ -347,7 +350,7 @@ export const cellScrollIntoView = (blockElement: HTMLElement, cellElement: Eleme
             if (contentElement) {
                 const contentRect = contentElement.getBoundingClientRect();
                 if (cellRect.bottom > contentRect.bottom) {
-                    contentElement.scrollTop = contentElement.scrollTop + (cellRect.top - contentRect.top - 33);
+                    contentElement.scrollTop = contentElement.scrollTop + (cellRect.bottom - contentRect.bottom);
                 }
             }
         }
@@ -801,7 +804,7 @@ export const renderCell = (cellValue: IAVCellValue, rowIndex = 0) => {
         if (cellValue?.isDetached) {
             text = `<span class="av__celltext">${Lute.EscapeHTMLStr(cellValue.block.content || "")}</span><span class="b3-chip b3-chip--info b3-chip--small" data-type="block-more">${window.siyuan.languages.more}</span>`;
         } else {
-            text = `<span class="b3-menu__avemoji" data-unicode="${cellValue.block.icon}">${unicode2Emoji(cellValue.block.icon || window.siyuan.storage[Constants.LOCAL_IMAGES].file)}</span><span data-type="block-ref" data-id="${cellValue.block.id}" data-subtype="s" class="av__celltext av__celltext--ref">${Lute.EscapeHTMLStr(cellValue.block.content)}</span><span class="b3-chip b3-chip--info b3-chip--small" data-type="block-more">${window.siyuan.languages.update}</span>`;
+            text = `<span class="b3-menu__avemoji" data-unicode="${cellValue.block.icon || ""}">${unicode2Emoji(cellValue.block.icon || window.siyuan.storage[Constants.LOCAL_IMAGES].file)}</span><span data-type="block-ref" data-id="${cellValue.block.id}" data-subtype="s" class="av__celltext av__celltext--ref">${Lute.EscapeHTMLStr(cellValue.block.content)}</span><span class="b3-chip b3-chip--info b3-chip--small" data-type="block-more">${window.siyuan.languages.update}</span>`;
         }
     } else if (cellValue.type === "number") {
         text = `<span class="av__celltext" data-content="${cellValue?.number.isNotEmpty ? cellValue?.number.content : ""}">${cellValue?.number.formattedContent || cellValue?.number.content || ""}</span>`;

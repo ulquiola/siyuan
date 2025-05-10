@@ -215,7 +215,8 @@ func InitConf() {
 	if 32 < Conf.FileTree.MaxOpenTabCount {
 		Conf.FileTree.MaxOpenTabCount = 32
 	}
-	Conf.FileTree.DocCreateSavePath = strings.TrimSpace(Conf.FileTree.DocCreateSavePath)
+	Conf.FileTree.DocCreateSavePath = util.TrimSpaceInPath(Conf.FileTree.DocCreateSavePath)
+	Conf.FileTree.RefCreateSavePath = util.TrimSpaceInPath(Conf.FileTree.RefCreateSavePath)
 	util.UseSingleLineSave = Conf.FileTree.UseSingleLineSave
 
 	util.CurrentCloudRegion = Conf.CloudRegion
@@ -691,7 +692,15 @@ func Close(force, setCurrentWorkspace bool, execInstallPkg int) (exitCode int) {
 	return
 }
 
-var CustomEmojis = sync.Map{}
+var customEmojis = sync.Map{}
+
+func AddCustomEmoji(emojiName, imgSrc string) {
+	customEmojis.Store(emojiName, imgSrc)
+}
+
+func ClearCustomEmojis() {
+	customEmojis.Clear()
+}
 
 func NewLute() (ret *lute.Lute) {
 	ret = util.NewLute()
@@ -701,7 +710,7 @@ func NewLute() (ret *lute.Lute) {
 	ret.SetSpellcheck(Conf.Editor.Spellcheck)
 
 	customEmojiMap := map[string]string{}
-	CustomEmojis.Range(func(key, value interface{}) bool {
+	customEmojis.Range(func(key, value interface{}) bool {
 		customEmojiMap[key.(string)] = value.(string)
 		return true
 	})
@@ -837,8 +846,7 @@ func (conf *AppConf) GetClosedBoxes() (ret []*Box) {
 
 func (conf *AppConf) Language(num int) (ret string) {
 	ret = conf.language(num)
-	subscribeURL := util.GetCloudAccountServer() + "/subscribe/siyuan"
-	ret = strings.ReplaceAll(ret, "${url}", subscribeURL)
+	ret = strings.ReplaceAll(ret, "${accountServer}", util.GetCloudAccountServer())
 	return
 }
 
@@ -993,6 +1001,7 @@ func clearWorkspaceTemp() {
 	os.RemoveAll(filepath.Join(util.TempDir, "import"))
 	os.RemoveAll(filepath.Join(util.TempDir, "repo"))
 	os.RemoveAll(filepath.Join(util.TempDir, "os"))
+	os.RemoveAll(filepath.Join(util.TempDir, "base64"))
 	os.RemoveAll(filepath.Join(util.TempDir, "blocktree.msgpack")) // v2.7.2 前旧版的块树数据
 	os.RemoveAll(filepath.Join(util.TempDir, "blocktree"))         // v3.1.0 前旧版的块树数据
 

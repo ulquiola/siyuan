@@ -528,23 +528,24 @@ const dragSb = async (protyle: IProtyle, sourceElements: Element[], targetElemen
     if (!isCopy && oldSourceParentElement && oldSourceParentElement.classList.contains("sb") && oldSourceParentElement.childElementCount === 2) {
         // 拖拽后，sb 只剩下一个元素
         if (isSameDoc) {
-            const sbData = cancelSB(protyle, oldSourceParentElement);
+            const sbData = await cancelSB(protyle, oldSourceParentElement);
             doOperations.push(sbData.doOperations[0], sbData.doOperations[1]);
             undoOperations.splice(0, 0, sbData.undoOperations[0], sbData.undoOperations[1]);
         } else {
             /// #if !MOBILE
             const otherProtyleElement = hasClosestByClassName(oldSourceParentElement, "protyle", true);
             if (otherProtyleElement) {
-                getAllEditor().find(item => {
-                    if (item.protyle.element.isSameNode(otherProtyleElement)) {
-                        const otherSbData = cancelSB(item.protyle, oldSourceParentElement);
+                const allEditor = getAllEditor();
+                for (let i = 0; i < allEditor.length; i++) {
+                    if (allEditor[i].protyle.element.isSameNode(otherProtyleElement)) {
+                        const otherSbData = await cancelSB(allEditor[i].protyle, oldSourceParentElement);
                         doOperations.push(otherSbData.doOperations[0], otherSbData.doOperations[1]);
                         undoOperations.splice(0, 0, otherSbData.undoOperations[0], otherSbData.undoOperations[1]);
                         // 需清空操作栈，否则撤销到移动出去的块的操作会抛异常
-                        item.protyle.undo.clear();
+                        allEditor[i].protyle.undo.clear();
                         return true;
                     }
-                });
+                }
             }
             /// #endif
         }
@@ -730,23 +731,23 @@ const dragSame = async (protyle: IProtyle, sourceElements: Element[], targetElem
     if (!isCopy && oldSourceParentElement && oldSourceParentElement.classList.contains("sb") && oldSourceParentElement.childElementCount === 2) {
         // 拖拽后，sb 只剩下一个元素
         if (isSameDoc) {
-            const sbData = cancelSB(protyle, oldSourceParentElement);
+            const sbData = await cancelSB(protyle, oldSourceParentElement);
             doOperations.push(sbData.doOperations[0], sbData.doOperations[1]);
             undoOperations.splice(0, 0, sbData.undoOperations[0], sbData.undoOperations[1]);
         } else {
             /// #if !MOBILE
             const otherProtyleElement = hasClosestByClassName(oldSourceParentElement, "protyle", true);
             if (otherProtyleElement) {
-                getAllEditor().find(item => {
-                    if (item.protyle.element.isSameNode(otherProtyleElement)) {
-                        const otherSbData = cancelSB(item.protyle, oldSourceParentElement);
+                const allEditor = getAllEditor();
+                for (let i = 0; i < allEditor.length; i++) {
+                    if (allEditor[i].protyle.element.isSameNode(otherProtyleElement)) {
+                        const otherSbData = await cancelSB(allEditor[i].protyle, oldSourceParentElement);
                         doOperations.push(otherSbData.doOperations[0], otherSbData.doOperations[1]);
                         undoOperations.splice(0, 0, otherSbData.undoOperations[0], otherSbData.undoOperations[1]);
                         // 需清空操作栈，否则撤销到移动出去的块的操作会抛异常
-                        item.protyle.undo.clear();
-                        return true;
+                        allEditor[i].protyle.undo.clear();
                     }
-                });
+                }
             }
             /// #endif
         }
@@ -861,7 +862,7 @@ export const dropEvent = (protyle: IProtyle, editorElement: HTMLElement) => {
         }
         const targetElement = editorElement.querySelector(".dragover__left, .dragover__right, .dragover__bottom, .dragover__top");
         if (targetElement) {
-            targetElement.classList.remove("protyle-wysiwyg--select", "dragover");
+            targetElement.classList.remove("dragover");
             targetElement.removeAttribute("select-start");
             targetElement.removeAttribute("select-end");
         }
@@ -922,7 +923,7 @@ export const dropEvent = (protyle: IProtyle, editorElement: HTMLElement) => {
                 const sourceIds: string [] = [];
                 const srcs: IOperationSrcs[] = [];
                 sourceElements.forEach(item => {
-                    item.classList.remove("protyle-wysiwyg--select", "protyle-wysiwyg--hl");
+                    item.classList.remove("protyle-wysiwyg--hl");
                     item.removeAttribute("select-start");
                     item.removeAttribute("select-end");
                     // 反链提及有高亮，如果拖拽到正文的话，应移除
@@ -1098,10 +1099,16 @@ export const dropEvent = (protyle: IProtyle, editorElement: HTMLElement) => {
                 }
                 let html = "";
                 for (let i = 0; i < ids.length; i++) {
+                    if (ids.length > 1) {
+                        html += "* ";
+                    }
                     const response = await fetchSyncPost("/api/block/getRefText", {id: ids[i]});
-                    html += protyle.lute.Md2BlockDOM(`((${ids[i]} '${response.data}'))`);
+                    html += `((${ids[i]} '${response.data}'))`;
+                    if (ids.length > 1 && i !== ids.length - 1) {
+                        html += "\n";
+                    }
                 }
-                insertHTML(html, protyle);
+                insertHTML(protyle.lute.Md2BlockDOM(html), protyle);
             } else if (targetElement && !protyle.options.backlinkData && targetElement.className.indexOf("dragover__") > -1) {
                 const scrollTop = protyle.contentElement.scrollTop;
                 if (targetElement.classList.contains("av__row")) {
@@ -1283,11 +1290,18 @@ export const dropEvent = (protyle: IProtyle, editorElement: HTMLElement) => {
         }
         const fileTreeIds = (event.dataTransfer.types.includes(Constants.SIYUAN_DROP_FILE) && window.siyuan.dragElement) ? window.siyuan.dragElement.innerText : "";
         if (event.shiftKey || (event.altKey && fileTreeIds.indexOf("-") === -1)) {
-            const targetElement = hasClosestBlock(event.target);
-            if (targetElement) {
-                targetElement.classList.remove("dragover__top", "protyle-wysiwyg--select", "dragover__bottom", "dragover__left", "dragover__right");
-                targetElement.removeAttribute("select-start");
-                targetElement.removeAttribute("select-end");
+            const targetAssitElement = hasClosestBlock(event.target);
+            if (targetAssitElement) {
+                targetAssitElement.classList.remove("dragover__top", "protyle-wysiwyg--select", "dragover__bottom", "dragover__left", "dragover__right");
+                targetAssitElement.removeAttribute("select-start");
+                targetAssitElement.removeAttribute("select-end");
+            } else {
+                // https://github.com/siyuan-note/siyuan/issues/14177
+                editorElement.querySelectorAll(".dragover__top, .protyle-wysiwyg--select, .dragover__bottom, .dragover__left, .dragover__right").forEach((item: HTMLElement) => {
+                    item.classList.remove("dragover__top", "protyle-wysiwyg--select", "dragover__bottom", "dragover__left", "dragover__right");
+                    item.removeAttribute("select-start");
+                    item.removeAttribute("select-end");
+                });
             }
             event.preventDefault();
             return;

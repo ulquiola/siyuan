@@ -30,6 +30,21 @@ export const openByMobile = (uri: string) => {
     }
 };
 
+export const exportByMobile = (uri: string) => {
+    if (!uri) {
+        return;
+    }
+    if (isInIOS()) {
+        openByMobile(uri);
+    } else if (isInAndroid()) {
+        window.JSAndroid.exportByDefault(uri);
+    } else if (isInHarmony()) {
+        window.JSHarmony.exportByDefault(uri);
+    } else {
+        window.open(uri);
+    }
+};
+
 export const readText = () => {
     if (isInAndroid()) {
         return window.JSAndroid.readClipboard();
@@ -37,6 +52,41 @@ export const readText = () => {
         return window.JSHarmony.readClipboard();
     }
     return navigator.clipboard.readText();
+};
+
+export const readClipboard = async () => {
+    const text: {
+        textHTML?: string,
+        textPlain?: string,
+        files?: File[],
+    } = {textPlain: "", textHTML: ""};
+    try {
+        const clipboardContents = await navigator.clipboard.read();
+        for (const item of clipboardContents) {
+            if (item.types.includes("text/html")) {
+                const blob = await item.getType("text/html");
+                text.textHTML = await blob.text();
+            }
+            if (item.types.includes("text/plain")) {
+                const blob = await item.getType("text/plain");
+                text.textPlain = await blob.text();
+            }
+            if (item.types.includes("image/png")) {
+                const blob = await item.getType("image/png");
+                text.files = [new File([blob], "image.png", {type: "image/png", lastModified: Date.now()})];
+            }
+        }
+        return text;
+    } catch (e) {
+        if (isInAndroid()) {
+            text.textPlain = window.JSAndroid.readClipboard();
+            text.textHTML = window.JSAndroid.readHTMLClipboard();
+        } else if (isInHarmony()) {
+            text.textPlain = window.JSHarmony.readClipboard();
+            text.textHTML = window.JSHarmony.readHTMLClipboard();
+        }
+        return text;
+    }
 };
 
 export const writeText = (text: string) => {
@@ -130,6 +180,11 @@ export const isIPhone = () => {
     return navigator.userAgent.indexOf("iPhone") > -1;
 };
 
+export const isSafari = () => {
+    const userAgent = navigator.userAgent;
+    return userAgent.includes("Safari") && !userAgent.includes("Chrome") && !userAgent.includes("Chromium");
+};
+
 export const isIPad = () => {
     return navigator.userAgent.indexOf("iPad") > -1;
 };
@@ -145,10 +200,14 @@ export const isWin11 = async () => {
     const ua = await (navigator as any).userAgentData.getHighEntropyValues(["platformVersion"]);
     if ((navigator as any).userAgentData.platform === "Windows") {
         if (parseInt(ua.platformVersion.split(".")[0]) >= 13) {
-           return true;
+            return true;
         }
     }
     return false;
+};
+
+export const isWindows = () => {
+    return navigator.platform.toUpperCase().indexOf("WIN") > -1;
 };
 
 export const isInAndroid = () => {

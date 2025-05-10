@@ -22,7 +22,7 @@ import {onGet} from "../protyle/util/onGet";
 import {addLoading} from "../protyle/ui/initUI";
 import {getIconByType} from "../editor/getIcon";
 import {unicode2Emoji} from "../emoji";
-import {hasClosestBlock, hasClosestByClassName} from "../protyle/util/hasClosest";
+import {hasClosestByClassName, hasClosestByTag} from "../protyle/util/hasClosest";
 import {isIPad, isNotCtrl, setStorageVal, updateHotkeyTip} from "../protyle/util/compatibility";
 import {newFileByName} from "../util/newFile";
 import {
@@ -86,14 +86,6 @@ export const openGlobalSearch = (app: App, text: string, replace: boolean, searc
 
 // closeCB 不存在为页签搜索
 export const genSearch = (app: App, config: Config.IUILayoutTabSearchConfig, element: HTMLElement, closeCB?: () => void) => {
-    let methodText = window.siyuan.languages.keyword;
-    if (config.method === 1) {
-        methodText = window.siyuan.languages.querySyntax;
-    } else if (config.method === 2) {
-        methodText = "SQL";
-    } else if (config.method === 3) {
-        methodText = window.siyuan.languages.regex;
-    }
     let includeChild = true;
     let enableIncludeChild = false;
     config.idPath.forEach(item => {
@@ -108,39 +100,39 @@ export const genSearch = (app: App, config: Config.IUILayoutTabSearchConfig, ele
     const unRefLocal = window.siyuan.storage[Constants.LOCAL_SEARCHUNREF];
     element.innerHTML = `<div class="fn__flex-column" style="height: 100%;${closeCB ? "border-radius: var(--b3-border-radius-b);overflow: hidden;" : ""}">
     <div class="block__icons" style="overflow: auto">
-        <span data-position="9bottom" data-type="previous" class="block__icon block__icon--show ariaLabel" disabled="disabled" aria-label="${window.siyuan.languages.previousLabel}"><svg><use xlink:href='#iconLeft'></use></svg></span>
+        <span data-position="9south" data-type="previous" class="block__icon block__icon--show ariaLabel" disabled="disabled" aria-label="${window.siyuan.languages.previousLabel}"><svg><use xlink:href='#iconLeft'></use></svg></span>
         <span class="fn__space"></span>
-        <span data-position="9bottom" data-type="next" class="block__icon block__icon--show ariaLabel" disabled="disabled" aria-label="${window.siyuan.languages.nextLabel}"><svg><use xlink:href='#iconRight'></use></svg></span>
+        <span data-position="9south" data-type="next" class="block__icon block__icon--show ariaLabel" disabled="disabled" aria-label="${window.siyuan.languages.nextLabel}"><svg><use xlink:href='#iconRight'></use></svg></span>
         <span class="fn__space"></span>
         <span id="searchResult" class="fn__flex-shrink ft__selectnone"></span>
         <span class="fn__space"></span>
         <span class="fn__flex-1${closeCB ? " resize__move" : ""}" style="min-height: 100%"></span>
-        <span id="searchPathInput" data-position="9bottom" class="search__path ft__on-surface fn__flex-center ft__smaller fn__ellipsis ariaLabel" aria-label="${escapeAriaLabel(config.hPath)}">
+        <span id="searchPathInput" data-position="9south" class="search__path ft__on-surface fn__flex-center ft__smaller fn__ellipsis ariaLabel" aria-label="${escapeAriaLabel(config.hPath)}">
             ${escapeHtml(config.hPath)}
             <svg class="search__rmpath${config.hPath ? "" : " fn__none"}"><use xlink:href="#iconCloseRound"></use></svg>
         </span>
         <span class="fn__space"></span>
-        <span data-position="9bottom" id="searchInclude" ${enableIncludeChild ? "" : "disabled"} aria-label="${window.siyuan.languages.includeChildDoc}" class="block__icon block__icon--show ariaLabel">
+        <span data-position="9south" id="searchInclude" ${enableIncludeChild ? "" : "disabled"} aria-label="${window.siyuan.languages.includeChildDoc}" class="block__icon block__icon--show ariaLabel">
             <svg${includeChild ? ' class="ft__primary"' : ""}><use xlink:href="#iconCopy"></use></svg>
         </span>
         <span class="fn__space"></span>
-        <span id="searchPath" aria-label="${window.siyuan.languages.specifyPath}" class="block__icon block__icon--show ariaLabel" data-position="9bottom">
+        <span id="searchPath" aria-label="${window.siyuan.languages.specifyPath}" class="block__icon block__icon--show ariaLabel" data-position="9south">
             <svg><use xlink:href="#iconFolder"></use></svg>
         </span>
         <span class="fn__space"></span>
-        <span id="searchMore" aria-label="${window.siyuan.languages.more}" class="block__icon block__icon--show ariaLabel" data-position="9bottom">
+        <span id="searchMore" aria-label="${window.siyuan.languages.more}" class="block__icon block__icon--show ariaLabel" data-position="9south">
             <svg><use xlink:href="#iconMore"></use></svg>
         </span>
         <span class="${closeCB ? "" : "fn__none "}fn__space"></span>
-        <span id="searchOpen" aria-label="${window.siyuan.languages.openInNewTab}" class="${closeCB ? "" : "fn__none "}block__icon block__icon--show ariaLabel" data-position="9bottom">
+        <span id="searchOpen" aria-label="${window.siyuan.languages.openInNewTab}" class="${closeCB ? "" : "fn__none "}block__icon block__icon--show ariaLabel" data-position="9south">
             <svg><use xlink:href="#iconLayoutRight"></use></svg>
         </span>
         <span class="fn__space"></span>
-        <span id="searchUnRef" aria-label="${window.siyuan.languages.listInvalidRefBlocks}" class="block__icon block__icon--show ariaLabel" data-position="9bottom">
+        <span id="searchUnRef" aria-label="${window.siyuan.languages.listInvalidRefBlocks}" class="block__icon block__icon--show ariaLabel" data-position="9south">
             <svg><use xlink:href="#iconLinkOff"></use></svg>
         </span>
         <span class="fn__space"></span>
-        <span id="searchAsset" aria-label="${window.siyuan.languages.searchAssetContent}" class="block__icon block__icon--show ariaLabel" data-position="9bottom">
+        <span id="searchAsset" aria-label="${window.siyuan.languages.searchAssetContent}" class="block__icon block__icon--show ariaLabel" data-position="9south">
             <svg><use xlink:href="#iconExact"></use></svg>
         </span>
     </div>
@@ -153,28 +145,26 @@ export const genSearch = (app: App, config: Config.IUILayoutTabSearchConfig, ele
             <input id="searchInput" class="b3-text-field b3-text-field--text" placeholder="${window.siyuan.languages.showRecentUpdatedBlocks}">
         </div>
         <div class="block__icons">
-            <span id="searchFilter" aria-label="${window.siyuan.languages.searchType}" class="block__icon ariaLabel" data-position="9bottom">
+            <span id="searchFilter" aria-label="${window.siyuan.languages.searchType}" class="block__icon ariaLabel" data-position="9south">
                 <svg><use xlink:href="#iconFilter"></use></svg>
             </span> 
             <span class="fn__space"></span>
-            <span id="searchSyntaxCheck" aria-label="${window.siyuan.languages.searchMethod} ${methodText}" class="block__icon ariaLabel" data-position="9bottom">
-                <svg><use xlink:href="#iconRegex"></use></svg>
-            </span>
+            ${genQueryHTML(config.method, "searchSyntaxCheck")}
             <span class="fn__space"></span>
-            <span id="searchReplace" aria-label="${window.siyuan.languages.replace}" class="block__icon ariaLabel" data-position="9bottom">
+            <span id="searchReplace" aria-label="${window.siyuan.languages.replace}" class="block__icon ariaLabel" data-position="9south">
                 <svg><use xlink:href="#iconReplace"></use></svg>
             </span>
             <span class="fn__space"></span>
-            <span id="searchRefresh" aria-label="${window.siyuan.languages.refresh}" class="block__icon ariaLabel" data-position="9bottom">
+            <span id="searchRefresh" aria-label="${window.siyuan.languages.refresh}" class="block__icon ariaLabel" data-position="9south">
                 <svg><use xlink:href="#iconRefresh"></use></svg>
             </span>
             <div class="fn__flex${config.group === 0 ? " fn__none" : ""}">
                 <span class="fn__space"></span>
-                <span id="searchExpand" class="block__icon block__icon--show ariaLabel" data-position="9bottom" aria-label="${window.siyuan.languages.expand}">
+                <span id="searchExpand" class="block__icon block__icon--show ariaLabel" data-position="9south" aria-label="${window.siyuan.languages.expand}">
                     <svg><use xlink:href="#iconExpand"></use></svg>
                 </span>
                 <span class="fn__space"></span>
-                <span id="searchCollapse" class="block__icon block__icon--show ariaLabel" data-position="9bottom" aria-label="${window.siyuan.languages.collapse}">
+                <span id="searchCollapse" class="block__icon block__icon--show ariaLabel" data-position="9south" aria-label="${window.siyuan.languages.collapse}">
                     <svg><use xlink:href="#iconContract"></use></svg>
                 </span>
             </div>
@@ -190,7 +180,7 @@ export const genSearch = (app: App, config: Config.IUILayoutTabSearchConfig, ele
         </div>
         <div class="fn__space"></div>
         <svg class="fn__rotate fn__none svg" style="padding: 0 8px;align-self: center;margin-right: 8px"><use xlink:href="#iconRefresh"></use></svg>
-        <span id="replaceFilter" aria-label="${window.siyuan.languages.replaceType}" class="block__icon ariaLabel fn__flex-center" data-position="9bottom">
+        <span id="replaceFilter" aria-label="${window.siyuan.languages.replaceType}" class="block__icon ariaLabel fn__flex-center" data-position="9south">
             <svg><use xlink:href="#iconFilter"></use></svg>
         </span>
         <span class="fn__space"></span>
@@ -217,25 +207,25 @@ export const genSearch = (app: App, config: Config.IUILayoutTabSearchConfig, ele
 <div class="fn__flex-column fn__none" id="searchAssets" style="height: 100%;${closeCB ? "border-radius: var(--b3-border-radius-b);overflow: hidden;" : ""}"></div>
 <div class="fn__flex-column fn__none" id="searchUnRefPanel" style="height: 100%;${closeCB ? "border-radius: var(--b3-border-radius-b);overflow: hidden;" : ""}">
     <div class="block__icons">
-        <span data-type="unRefPrevious" class="block__icon block__icon--show ariaLabel" data-position="9bottom" disabled="disabled" aria-label="${window.siyuan.languages.previousLabel}"><svg><use xlink:href='#iconLeft'></use></svg></span>
+        <span data-type="unRefPrevious" class="block__icon block__icon--show ariaLabel" data-position="9south" disabled="disabled" aria-label="${window.siyuan.languages.previousLabel}"><svg><use xlink:href='#iconLeft'></use></svg></span>
         <span class="fn__space"></span>
-        <span data-type="unRefNext" class="block__icon block__icon--show ariaLabel" data-position="9bottom" disabled="disabled" aria-label="${window.siyuan.languages.nextLabel}"><svg><use xlink:href='#iconRight'></use></svg></span>
+        <span data-type="unRefNext" class="block__icon block__icon--show ariaLabel" data-position="9south" disabled="disabled" aria-label="${window.siyuan.languages.nextLabel}"><svg><use xlink:href='#iconRight'></use></svg></span>
         <span class="fn__space"></span>
         <span id="searchUnRefResult" class="ft__selectnone"></span>
-        <span class="fn__flex-1"></span>
+        <span class="fn__flex-1${closeCB ? " resize__move" : ""}" style="min-height: 100%"></span>
         <span class="fn__space"></span>
-        <span id="unRefMore" aria-label="${window.siyuan.languages.more}" class="block__icon block__icon--show ariaLabel" data-position="9bottom">
+        <span id="unRefMore" aria-label="${window.siyuan.languages.more}" class="block__icon block__icon--show ariaLabel" data-position="9south">
             <svg><use xlink:href="#iconMore"></use></svg>
         </span>
         <span class="fn__space"></span>
-        <span id="searchUnRefClose" aria-label="${!closeCB ? window.siyuan.languages.stickSearch : window.siyuan.languages.globalSearch}" class="block__icon block__icon--show ariaLabel" data-position="9bottom">
+        <span id="searchUnRefClose" aria-label="${!closeCB ? window.siyuan.languages.stickSearch : window.siyuan.languages.globalSearch}" class="block__icon block__icon--show ariaLabel" data-position="9south">
             <svg><use xlink:href="#iconBack"></use></svg>
         </span>
     </div>
     <div class="search__layout${unRefLocal.layout === 1 ? " search__layout--row" : ""}">
         <div id="searchUnRefList" class="fn__flex-1 search__list b3-list b3-list--background"></div>
         <div class="search__drag"></div>
-        <div id="searchUnRefPreview" class="fn__flex-1 search__preview b3-typography" style="padding: 8px"></div>
+        <div id="searchUnRefPreview" class="fn__flex-1 search__preview"></div>
     </div>
     <div class="search__tip${closeCB ? "" : " fn__none"}">
         <kbd>↑/↓/PageUp/PageDown</kbd> ${window.siyuan.languages.searchTip1}
@@ -338,7 +328,16 @@ export const genSearch = (app: App, config: Config.IUILayoutTabSearchConfig, ele
             }
         };
     });
-
+    dragElement.addEventListener("dblclick", () => {
+        edit.protyle.element.style[localSearch.layout === 1 ? "width" : "height"] = "";
+        edit.protyle.element.classList.add("fn__flex-1");
+        const direction = window.siyuan.storage[Constants.LOCAL_SEARCHKEYS][closeCB ? "layout" : "layoutTab"] === 1 ? "lr" : "tb";
+        window.siyuan.storage[Constants.LOCAL_SEARCHKEYS][direction === "lr" ? (closeCB ? "col" : "colTab") : (closeCB ? "row" : "rowTab")] = "";
+        setStorageVal(Constants.LOCAL_SEARCHKEYS, window.siyuan.storage[Constants.LOCAL_SEARCHKEYS]);
+        if (direction === "lr") {
+            resize(edit.protyle);
+        }
+    });
     const localSearch = window.siyuan.storage[Constants.LOCAL_SEARCHASSET] as ISearchAssetOption;
     const assetsElement = element.querySelector("#searchAssets") as HTMLElement;
     const unRefPanelElement = element.querySelector("#searchUnRefPanel") as HTMLElement;
@@ -730,7 +729,7 @@ export const genSearch = (app: App, config: Config.IUILayoutTabSearchConfig, ele
                 break;
             } else if (target.id === "assetSyntaxCheck") {
                 assetMethodMenu(target, () => {
-                    element.querySelector("#assetSyntaxCheck").setAttribute("aria-label", getQueryTip(localSearch.method));
+                    element.querySelector("#assetSyntaxCheck").outerHTML = genQueryHTML(localSearch.method, "assetSyntaxCheck");
                     assetInputEvent(assetsElement, localSearch);
                     setStorageVal(Constants.LOCAL_SEARCHASSET, localSearch);
                 });
@@ -739,7 +738,7 @@ export const genSearch = (app: App, config: Config.IUILayoutTabSearchConfig, ele
                 break;
             } else if (target.id === "searchSyntaxCheck") {
                 queryMenu(config, () => {
-                    element.querySelector("#searchSyntaxCheck").setAttribute("aria-label", getQueryTip(config.method));
+                    element.querySelector("#searchSyntaxCheck").outerHTML = genQueryHTML(config.method, "searchSyntaxCheck");
                     config.page = 1;
                     inputEvent(element, config, edit, true);
                 });
@@ -923,23 +922,30 @@ export const genSearch = (app: App, config: Config.IUILayoutTabSearchConfig, ele
     return {edit, unRefEdit};
 };
 
-export const getQueryTip = (method: number) => {
-    let methodTip = window.siyuan.languages.searchMethod + " ";
+export const genQueryHTML = (method: number, id: string) => {
+    let methodTip = "";
+    let methodIcon = "";
     switch (method) {
         case 0:
-            methodTip += window.siyuan.languages.keyword;
+            methodTip = window.siyuan.languages.keyword;
+            methodIcon = "Exact";
             break;
         case 1:
-            methodTip += window.siyuan.languages.querySyntax;
+            methodTip = window.siyuan.languages.querySyntax;
+            methodIcon = "Quote";
             break;
         case 2:
-            methodTip += "SQL";
+            methodTip = "SQL";
+            methodIcon = "Database";
             break;
         case 3:
-            methodTip += window.siyuan.languages.regex;
+            methodTip = window.siyuan.languages.regex;
+            methodIcon = "Regex";
             break;
     }
-    return methodTip;
+    return `<span id="${id}" aria-label="${window.siyuan.languages.searchMethod} ${methodTip}" class="block__icon ariaLabel" data-position="9south">
+    <svg><use xlink:href="#icon${methodIcon}"></use></svg>
+</span>`;
 };
 
 export const updateConfig = (element: Element, item: Config.IUILayoutTabSearchConfig, config: Config.IUILayoutTabSearchConfig,
@@ -998,12 +1004,27 @@ export const updateConfig = (element: Element, item: Config.IUILayoutTabSearchCo
         (element.querySelector("#searchInput") as HTMLInputElement).value = item.k;
     }
     (element.querySelector("#replaceInput") as HTMLInputElement).value = item.r;
-    element.querySelector("#searchSyntaxCheck").setAttribute("aria-label", getQueryTip(item.method));
+    element.querySelector("#searchSyntaxCheck").outerHTML = genQueryHTML(item.method, "searchSyntaxCheck");
     Object.assign(config, item);
     window.siyuan.storage[Constants.LOCAL_SEARCHDATA] = Object.assign({}, config);
     setStorageVal(Constants.LOCAL_SEARCHDATA, window.siyuan.storage[Constants.LOCAL_SEARCHDATA]);
     inputEvent(element, config, edit);
     window.siyuan.menus.menu.remove();
+};
+
+const scrollToCurrent = (contentElement: HTMLElement, currentRange: Range, contentRect: DOMRect) => {
+    contentElement.scrollTop = contentElement.scrollTop + currentRange.getBoundingClientRect().top - contentRect.top - contentRect.height / 2;
+    const tableElement = hasClosestByClassName(currentRange.startContainer, "table");
+    if (tableElement) {
+        const cellElement = hasClosestByTag(currentRange.startContainer, "TD") || hasClosestByTag(currentRange.startContainer, "TH");
+        if (cellElement) {
+            tableElement.firstElementChild.scrollLeft = cellElement.offsetLeft;
+            if (tableElement.getAttribute("custom-pinthead") === "true") {
+                contentElement.scrollTop = contentElement.scrollTop + tableElement.getBoundingClientRect().top - contentRect.top;
+                tableElement.querySelector("table").scrollTop = cellElement.offsetTop;
+            }
+        }
+    }
 };
 
 const renderNextSearchMark = (options: {
@@ -1032,7 +1053,7 @@ const renderNextSearchMark = (options: {
             if (!currentRange.toString()) {
                 highlightById(options.edit.protyle, options.id);
             } else {
-                options.edit.protyle.contentElement.scrollTop = options.edit.protyle.contentElement.scrollTop + currentRange.getBoundingClientRect().top - contentRect.top - contentRect.height / 2;
+                scrollToCurrent(options.edit.protyle.contentElement, currentRange, contentRect);
             }
         }
         return;
@@ -1106,11 +1127,12 @@ export const getArticle = (options: {
                 if (isSupportCSSHL()) {
                     searchMarkRender(options.edit.protyle, getResponse.data.keywords, options.id, () => {
                         const highlightKeys = () => {
-                            if (options.edit.protyle.highlight.ranges.length > 0 && options.edit.protyle.highlight.ranges[options.edit.protyle.highlight.rangeIndex]) {
-                                if (!options.edit.protyle.highlight.ranges[options.edit.protyle.highlight.rangeIndex].toString()) {
+                            const currentRange = options.edit.protyle.highlight.ranges[options.edit.protyle.highlight.rangeIndex];
+                            if (options.edit.protyle.highlight.ranges.length > 0 && currentRange) {
+                                if (!currentRange.toString()) {
                                     highlightById(options.edit.protyle, options.id);
                                 } else {
-                                    options.edit.protyle.contentElement.scrollTop = options.edit.protyle.contentElement.scrollTop + options.edit.protyle.highlight.ranges[options.edit.protyle.highlight.rangeIndex].getBoundingClientRect().top - contentRect.top - contentRect.height / 2;
+                                    scrollToCurrent(options.edit.protyle.contentElement, currentRange, contentRect);
                                 }
                             } else {
                                 highlightById(options.edit.protyle, options.id);

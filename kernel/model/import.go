@@ -352,7 +352,7 @@ func ImportSY(zipPath, boxID, toPath string) (err error) {
 			bIDs := deckToImport.GetBlockIDs()
 			cards := deckToImport.GetCardsByBlockIDs(bIDs)
 			for _, card := range cards {
-				deck.AddCard(card.ID(), blockIDs[card.BlockID()])
+				deck.AddCard(ast.NewNodeID(), blockIDs[card.BlockID()])
 			}
 
 			if 0 < len(cards) {
@@ -721,7 +721,7 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 	hPathsIDs := map[string]string{}
 	idPaths := map[string]string{}
 	moveIDs := map[string]string{}
-
+	assetsDone := map[string]string{}
 	if gulu.File.IsDir(localPath) { // 导入文件夹
 		// 收集所有资源文件
 		assets := map[string]string{}
@@ -744,7 +744,6 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 		})
 
 		targetPaths := map[string]string{}
-		assetsDone := map[string]string{}
 		count := 0
 		// md 转换 sy
 		filelock.Walk(localPath, func(currentPath string, d fs.DirEntry, err error) error {
@@ -866,15 +865,11 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 					return ast.WalkContinue
 				}
 
-				absolutePath := filepath.Join(localPath, dest)
-				newAbsolutePath := absolutePath
-
 				decodedDest := string(html.DecodeDestination([]byte(dest)))
 				if decodedDest != dest {
 					dest = decodedDest
-					newAbsolutePath = filepath.Join(localPath, dest)
-					gulu.File.Copy(absolutePath, newAbsolutePath)
 				}
+				absolutePath := filepath.Join(currentDir, dest)
 
 				if ast.NodeLinkDest == n.Type {
 					n.Tokens = []byte(dest)
@@ -889,36 +884,29 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 					return ast.WalkContinue
 				}
 
-				if !gulu.File.IsExist(newAbsolutePath) {
+				if !gulu.File.IsExist(absolutePath) {
 					return ast.WalkContinue
 				}
 
-				absDest := filepath.Join(currentDir, dest)
-				fullPath, exist := assets[absDest]
-				if !exist {
-					absDest = filepath.Join(currentDir, string(html.DecodeDestination([]byte(dest))))
+				existName := assetsDone[absolutePath]
+				var name string
+				if "" == existName {
+					name = filepath.Base(absolutePath)
+					name = util.FilterUploadFileName(name)
+					name = util.AssetName(name)
+					assetTargetPath := filepath.Join(assetDirPath, name)
+					if err = filelock.Copy(absolutePath, assetTargetPath); err != nil {
+						logging.LogErrorf("copy asset from [%s] to [%s] failed: %s", absolutePath, assetTargetPath, err)
+						return ast.WalkContinue
+					}
+					assetsDone[absolutePath] = name
+				} else {
+					name = existName
 				}
-				fullPath, exist = assets[absDest]
-				if exist {
-					existName := assetsDone[absDest]
-					var name string
-					if "" == existName {
-						name = filepath.Base(fullPath)
-						name = util.AssetName(name)
-						assetTargetPath := filepath.Join(assetDirPath, name)
-						if err = filelock.Copy(fullPath, assetTargetPath); err != nil {
-							logging.LogErrorf("copy asset from [%s] to [%s] failed: %s", fullPath, assetTargetPath, err)
-							return ast.WalkContinue
-						}
-						assetsDone[absDest] = name
-					} else {
-						name = existName
-					}
-					if ast.NodeLinkDest == n.Type {
-						n.Tokens = []byte("assets/" + name)
-					} else {
-						n.TextMarkAHref = "assets/" + name
-					}
+				if ast.NodeLinkDest == n.Type {
+					n.Tokens = []byte("assets/" + name)
+				} else {
+					n.TextMarkAHref = "assets/" + name
 				}
 				return ast.WalkContinue
 			})
@@ -1000,15 +988,11 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 				return ast.WalkContinue
 			}
 
-			absolutePath := filepath.Join(filepath.Dir(localPath), dest)
-			newAbsolutePath := absolutePath
-
 			decodedDest := string(html.DecodeDestination([]byte(dest)))
 			if decodedDest != dest {
 				dest = decodedDest
-				newAbsolutePath = filepath.Join(filepath.Dir(localPath), dest)
-				gulu.File.Copy(absolutePath, newAbsolutePath)
 			}
+			absolutePath := filepath.Join(filepath.Dir(localPath), dest)
 
 			if ast.NodeLinkDest == n.Type {
 				n.Tokens = []byte(dest)
@@ -1023,16 +1007,24 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 				return ast.WalkContinue
 			}
 
-			if !gulu.File.IsExist(newAbsolutePath) {
+			if !gulu.File.IsExist(absolutePath) {
 				return ast.WalkContinue
 			}
 
-			name := filepath.Base(newAbsolutePath)
-			name = util.AssetName(name)
-			assetTargetPath := filepath.Join(assetDirPath, name)
-			if err = filelock.Copy(newAbsolutePath, assetTargetPath); err != nil {
-				logging.LogErrorf("copy asset from [%s] to [%s] failed: %s", newAbsolutePath, assetTargetPath, err)
-				return ast.WalkContinue
+			existName := assetsDone[absolutePath]
+			var name string
+			if "" == existName {
+				name = filepath.Base(absolutePath)
+				name = util.FilterUploadFileName(name)
+				name = util.AssetName(name)
+				assetTargetPath := filepath.Join(assetDirPath, name)
+				if err = filelock.Copy(absolutePath, assetTargetPath); err != nil {
+					logging.LogErrorf("copy asset from [%s] to [%s] failed: %s", absolutePath, assetTargetPath, err)
+					return ast.WalkContinue
+				}
+				assetsDone[absolutePath] = name
+			} else {
+				name = existName
 			}
 			if ast.NodeLinkDest == n.Type {
 				n.Tokens = []byte("assets/" + name)
@@ -1152,6 +1144,8 @@ func processBase64Img(n *ast.Node, dest string, assetDirPath string) {
 	case "image/jpeg":
 		img, decodeErr = jpeg.Decode(dataReader)
 		ext = ".jpg"
+	case "image/svg+xml":
+		ext = ".svg"
 	default:
 		logging.LogWarnf("unsupported base64 image type [%s]", typ)
 		return
@@ -1182,6 +1176,8 @@ func processBase64Img(n *ast.Node, dest string, assetDirPath string) {
 		encodeErr = png.Encode(tmpFile, img)
 	case "image/jpeg":
 		encodeErr = jpeg.Encode(tmpFile, img, &jpeg.Options{Quality: 100})
+	case "image/svg+xml":
+		_, encodeErr = tmpFile.Write(unbased)
 	}
 	if nil != encodeErr {
 		logging.LogErrorf("encode base64 image failed: %s", encodeErr)

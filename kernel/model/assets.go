@@ -182,17 +182,15 @@ func NetAssets2LocalAssets(rootID string, onlyImg bool, originalURL string) (err
 					request.SetHeader("Referer", originalURL) // 改进浏览器剪藏扩展转换本地图片成功率 https://github.com/siyuan-note/siyuan/issues/7464
 				}
 				resp, reqErr := request.Get(u)
+				if nil != reqErr {
+					logging.LogErrorf("download network asset [%s] failed: %s", u, reqErr)
+					continue
+				}
 				if http.StatusForbidden == resp.StatusCode || http.StatusUnauthorized == resp.StatusCode {
 					forbiddenCount++
 				}
-
 				if strings.Contains(strings.ToLower(resp.GetContentType()), "text/html") {
 					// 忽略超链接网页 `Convert network assets to local` no longer process webpage https://github.com/siyuan-note/siyuan/issues/9965
-					continue
-				}
-
-				if nil != reqErr {
-					logging.LogErrorf("download network asset [%s] failed: %s", u, reqErr)
 					continue
 				}
 				if 200 != resp.StatusCode {
@@ -651,9 +649,16 @@ func RenameAsset(oldPath, newName string) (newPath string, err error) {
 	}
 
 	newName = util.AssetName(newName + filepath.Ext(oldPath))
-	newPath = "assets/" + newName
-	if err = filelock.Copy(filepath.Join(util.DataDir, oldPath), filepath.Join(util.DataDir, newPath)); err != nil {
-		logging.LogErrorf("copy asset [%s] failed: %s", oldPath, err)
+	parentDir := path.Dir(oldPath)
+	newPath = path.Join(parentDir, newName)
+	oldAbsPath, getErr := GetAssetAbsPath(oldPath)
+	if getErr != nil {
+		logging.LogErrorf("get asset [%s] abs path failed: %s", oldPath, getErr)
+		return
+	}
+	newAbsPath := filepath.Join(filepath.Dir(oldAbsPath), newName)
+	if err = filelock.Copy(oldAbsPath, newAbsPath); err != nil {
+		logging.LogErrorf("copy asset [%s] failed: %s", oldAbsPath, err)
 		return
 	}
 

@@ -25,6 +25,9 @@ import {
 import {isTouchDevice} from "../../util/functions";
 import {App} from "../../index";
 import {refreshFileTree} from "../../dialog/processSystem";
+/// #if !BROWSER
+import {ipcRenderer} from "electron";
+/// #endif
 import {hideTooltip, showTooltip} from "../../dialog/tooltip";
 
 export class Files extends Model {
@@ -322,6 +325,13 @@ export class Files extends Model {
                                     x: event.clientX,
                                     y: event.clientY
                                 });
+                            } else if (type === "addLocal") {
+                                fetchPost("/api/filetree/moveLocalShorthands", {
+                                    "notebook": notebookId
+                                });
+                                this.element.querySelectorAll('[data-type="addLocal"]').forEach(item => {
+                                    item.remove();
+                                });
                             }
                         }
                         if (type === "more-file") {
@@ -425,7 +435,7 @@ export class Files extends Model {
                 const ghostElement = document.createElement("ul");
                 selectElements.forEach((item: HTMLElement, index) => {
                     ghostElement.append(item.cloneNode(true));
-                    item.style.opacity = "0.1";
+                    item.style.opacity = "0.38";
                     const itemNodeId = item.dataset.nodeId ||
                         item.dataset.path; // 拖拽笔记本时值不能为空，否则 drop 就不会继续排序
                     if (itemNodeId) {
@@ -460,9 +470,13 @@ export class Files extends Model {
                 }
             });
             window.siyuan.dragElement = undefined;
+            /// #if !BROWSER
+            ipcRenderer.send(Constants.SIYUAN_SEND_WINDOWS, {cmd: "resetTabsStyle", data: "rmDragStyle"});
+            /// #else
             document.querySelectorAll(".layout-tab-bars--drag").forEach(item => {
                 item.classList.remove("layout-tab-bars--drag");
             });
+            /// #endif
         });
         this.element.addEventListener("dragover", (event: DragEvent & { target: HTMLElement }) => {
             if (window.siyuan.config.readonly || event.dataTransfer.types.includes(Constants.SIYUAN_DROP_TAB)) {
@@ -520,11 +534,10 @@ export class Files extends Model {
                 return;
             }
             const notebookSort = notebookElement.getAttribute("data-sortmode");
-            if ((
-                    notebookSort === "6" || (window.siyuan.config.fileTree.sort === 6 && notebookSort === "15")
-                ) &&
-                // 防止文档拖拽到笔记本外
-                !(!sourceOnlyRoot && targetType === "navigation-root")) {
+            if ((sourceOnlyRoot && targetType === "navigation-root" && window.siyuan.config.fileTree.sort === 6) ||
+                (!sourceOnlyRoot && targetType !== "navigation-root" &&
+                    (notebookSort === "6" || (window.siyuan.config.fileTree.sort === 6 && notebookSort === "15")))
+            ) {
                 const nodeRect = liElement.getBoundingClientRect();
                 const dragHeight = nodeRect.height * .2;
                 if (targetType === "navigation-root" && sourceOnlyRoot) {
@@ -772,13 +785,20 @@ export class Files extends Model {
             if (!liElement) {
                 const dirname = pathPosix().dirname(currentPath);
                 if (dirname === "/") {
-                    this.getLeaf(treeElement.firstElementChild, notebookId, true);
+                    if (treeElement.firstElementChild.querySelector(".b3-list-item__arrow--open")) {
+                        this.getLeaf(treeElement.firstElementChild, notebookId, true);
+                    }
                     break;
                 } else {
                     currentPath = dirname + ".sy";
                 }
             } else {
-                liElement.querySelector(".fn__hidden")?.classList.remove("fn__hidden");
+                const hiddenElement = liElement.querySelector(".fn__hidden");
+                if (hiddenElement) {
+                    hiddenElement.classList.remove("fn__hidden");
+                } else {
+                    this.getLeaf(liElement, notebookId, true);
+                }
                 break;
             }
         }
@@ -806,7 +826,7 @@ data-type="navigation-root" data-path="/">
         <svg class="b3-list-item__arrow"><use xlink:href="#iconRight"></use></svg>
     </span>
     ${emojiHTML}
-    <span class="b3-list-item__text" data-position="parentE">${escapeHtml(item.name)}</span>
+    <span class="b3-list-item__text ariaLabel" data-position="parentE">${escapeHtml(item.name)}</span>
     <span data-type="more-root" class="b3-list-item__action b3-tooltips b3-tooltips__w${(window.siyuan.config.readonly) ? " fn__none" : ""}" aria-label="${window.siyuan.languages.more}">
         <svg><use xlink:href="#iconMore"></use></svg>
     </span>
@@ -1101,13 +1121,10 @@ data-type="navigation-root" data-path="/">
             liItem.classList.remove("b3-list-item--focus");
         });
         target.classList.add("b3-list-item--focus");
+
         if (isScroll) {
-            let offsetTop = target.offsetTop;
-            // https://github.com/siyuan-note/siyuan/issues/8749
-            if (target.parentElement.classList.contains("file-tree__sliderDown") && target.offsetParent) {
-                offsetTop = (target.offsetParent as HTMLElement).offsetTop;
-            }
-            this.element.scrollTop = offsetTop - this.element.clientHeight / 2 - this.actionsElement.clientHeight;
+            const elementRect = this.element.getBoundingClientRect();
+            this.element.scrollTop = this.element.scrollTop + (target.getBoundingClientRect().top - (elementRect.top + elementRect.height / 2));
         }
     }
 
