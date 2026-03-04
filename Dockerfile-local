@@ -1,10 +1,9 @@
-# 使用国内 Node.js 镜像（如淘宝 NPM 镜像）
-FROM node:21 AS NODE_BUILD
+# === 阶段 1: Node.js 构建阶段 ===
+# 修正：阶段名改为小写
+FROM node:21 AS node_build
 WORKDIR /go/src/github.com/siyuan-note/siyuan/
-ADD . /go/src/github.com/siyuan-note/siyuan/
 
-# 使用阿里云 Debian 镜像并安装 jq
-# 确保 /etc/apt/sources.list 存在，并替换为阿里云 Debian 镜像
+# 1. 先安装基础工具 jq
 RUN { \
     echo "deb http://mirrors.aliyun.com/debian/ bookworm main non-free non-free-firmware contrib"; \
     echo "deb-src http://mirrors.aliyun.com/debian/ bookworm main non-free non-free-firmware contrib"; \
@@ -16,28 +15,36 @@ RUN { \
     apt-get update && \
     apt-get install -y jq
 
-# 使用国内 PNPM 镜像（淘宝源）
+# 2. 先复制依赖描述文件
+COPY app/package.json app/pnpm-lock.yaml ./app/
+
+# 3. 安装依赖 (利用缓存)
 RUN cd app && \
     packageManager=$(jq -r '.packageManager' package.json) && \
     if [ -n "$packageManager" ]; then \
         npm install -g $packageManager --registry=https://registry.npmmirror.com; \
     else \
-        echo "No packageManager field found in package.json"; \
         npm install -g pnpm --registry=https://registry.npmmirror.com; \
     fi && \
     pnpm config set registry https://registry.npmmirror.com && \
-    pnpm install --silent && \
-    pnpm run build
+    pnpm install --frozen-lockfile
+
+# 4. 复制源代码
+ADD . /go/src/github.com/siyuan-note/siyuan/
+
+# 5. 执行构建
+RUN cd app && pnpm run build
 
 # 清理临时文件
 RUN apt-get purge -y jq && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
-# 使用国内 Golang 镜像（中科大源）
-FROM golang:1.26.0-alpine AS GO_BUILD
+# === 阶段 2: Golang 构建阶段 ===
+# 修正：阶段名改为小写
+FROM golang:1.26.0-alpine AS go_build
 WORKDIR /go/src/github.com/siyuan-note/siyuan/
-COPY --from=NODE_BUILD /go/src/github.com/siyuan-note/siyuan/ /go/src/github.com/siyuan-note/siyuan/
+COPY --from=node_build /go/src/github.com/siyuan-note/siyuan/ /go/src/github.com/siyuan-note/siyuan/
 
 # 使用阿里云 Alpine 镜像并编译
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
@@ -54,12 +61,12 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
     mv /go/src/github.com/siyuan-note/siyuan/kernel/entrypoint.sh /opt/siyuan/entrypoint.sh && \
     find /opt/siyuan/ -name .git | xargs rm -rf
 
-# 最终阶段：使用 Alpine 国内镜像
+# === 阶段 3: 最终运行阶段 ===
 FROM alpine:latest
 LABEL maintainer="Liang Ding<845765@qq.com>"
 LABEL modifier="ulquiola<ulquiola@163.com>"
 WORKDIR /opt/siyuan/
-COPY --from=GO_BUILD /opt/siyuan/ /opt/siyuan/
+COPY --from=go_build /opt/siyuan/ /opt/siyuan/
 
 # 配置时区和语言环境
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
@@ -76,4 +83,3 @@ EXPOSE 6806
 VOLUME /siyuan/workspace
 ENTRYPOINT ["/opt/siyuan/entrypoint.sh"]
 CMD ["--workspace=/siyuan/workspace", "--accessAuthCode=password"]
-
