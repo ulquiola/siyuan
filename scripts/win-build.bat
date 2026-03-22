@@ -67,7 +67,8 @@ rmdir /S /Q "%PROJECT_ROOT%\app\kernel-arm64" 1>nul
 
 echo.
 echo Building UI
-cd /d "%PROJECT_ROOT%\app"
+cd app
+SET ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
 if errorlevel 1 (
     exit /b %errorlevel%
 )
@@ -87,6 +88,14 @@ cd /d "%PROJECT_ROOT%\kernel"
 if errorlevel 1 (
     exit /b %errorlevel%
 )
+
+echo 'Cleaning Builds'
+del /S /Q /F app\build 1>nul
+del /S /Q /F app\kernel 1>nul
+
+
+echo Building Kernel
+@REM the C compiler "gcc" is necessary https://sourceforge.net/projects/mingw-w64/files/mingw-w64/
 go version
 set GO111MODULE=on
 set GOPROXY=https://mirrors.aliyun.com/goproxy/
@@ -106,88 +115,17 @@ if defined BUILD_AMD64 (
         exit /b %errorlevel%
     )
 )
-if defined BUILD_ARM64 (
-    echo.
-    echo Building Kernel arm64
-    set GOARCH=arm64
-    @REM if you want to build arm64, you need to install aarch64-w64-mingw32-gcc
-    set CC="D:/Program Files/llvm-mingw-20240518-ucrt-x86_64/bin/aarch64-w64-mingw32-gcc.exe"
-    go build --tags fts5 -v -o "%PROJECT_ROOT%\app\kernel-arm64\SiYuan-Kernel.exe" -ldflags "-s -w -H=windowsgui" .
-    if errorlevel 1 (
-        exit /b %errorlevel%
-    )
-)
 
-if defined BUILD_AMD64 goto electron
-if defined BUILD_ARM64 goto electron
-goto :skipelectron
-:electron
-echo.
-echo Building Electron App
-cd /d "%PROJECT_ROOT%\app"
+
+cd ..
 if errorlevel 1 (
     exit /b %errorlevel%
 )
-if defined BUILD_AMD64 (
-    echo.
-    echo Building Electron App amd64
-    copy "%PROJECT_ROOT%\app\elevator\elevator-amd64.exe" "%PROJECT_ROOT%\app\kernel\elevator.exe"
-    call pnpm run dist
-    if errorlevel 1 (
-        exit /b %errorlevel%
-    )
-)
-if defined BUILD_ARM64 (
-    echo.
-    echo Building Electron App arm64
-    copy "%PROJECT_ROOT%\app\elevator\elevator-arm64.exe" "%PROJECT_ROOT%\app\kernel-arm64\elevator.exe"
-    call pnpm run dist-arm64
-    if errorlevel 1 (
-        exit /b %errorlevel%
-    )
-)
-:skipelectron
 
-if defined BUILD_APPX_AMD64 goto appx
-if defined BUILD_APPX_ARM64 goto appx
-goto :skipappx
-:appx
-echo.
-echo Building Appx
-cd /d "%PROJECT_ROOT%"
+cd app
+call pnpm run dist
 if errorlevel 1 (
     exit /b %errorlevel%
 )
-if defined BUILD_APPX_AMD64 (
-    echo.
-    echo Building Appx amd64
-    echo Building Appx amd64 should be disabled if you do not need it. Not configured correctly will lead to build failures
-    cd . > "%PROJECT_ROOT%\app\build\win-unpacked\resources\ms-store"
-    if errorlevel 1 (
-        exit /b %errorlevel%
-    )
-    call electron-windows-store --input-directory "%PROJECT_ROOT%\app\build\win-unpacked" --output-directory "%PROJECT_ROOT%\app\build" --package-version 1.0.0.0 --package-name SiYuan --manifest "%PROJECT_ROOT%\app\appx\AppxManifest.xml" --assets "%PROJECT_ROOT%\app\appx\assets" --make-pri true
 
-    rmdir /S /Q "%PROJECT_ROOT%\app\build\pre-appx" 1>nul
-)
-if defined BUILD_APPX_ARM64 (
-    echo.
-    echo Building Appx arm64
-    echo Building Appx arm64 should be disabled if you do not need it. Not configured correctly will lead to build failures
-    cd . > "%PROJECT_ROOT%\app\build\win-arm64-unpacked\resources\ms-store"
-    if errorlevel 1 (
-        exit /b %errorlevel%
-    )
-    call electron-windows-store --input-directory "%PROJECT_ROOT%\app\build\win-arm64-unpacked" --output-directory "%PROJECT_ROOT%\app\build" --package-version 1.0.0.0 --package-name SiYuan-arm64 --manifest "%PROJECT_ROOT%\app\appx\AppxManifest-arm64.xml" --assets "%PROJECT_ROOT%\app\appx\assets" --make-pri true
-
-    rmdir /S /Q "%PROJECT_ROOT%\app\build\pre-appx" 1>nul
-)
-:skipappx
-
-echo.
-echo ==============================
-echo       Build successful!
-echo ==============================
-
-REM 返回初始目录
-cd /d "%INITIAL_DIR%"
+cd ..
