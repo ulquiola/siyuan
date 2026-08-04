@@ -3,7 +3,6 @@ import {Menus} from "./menus";
 import {Model} from "./layout/Model";
 import {onGetConfig} from "./boot/onGetConfig";
 import {initBlockPopover} from "./block/popover";
-import {onSetaccount} from "./config/tabs/accountUi";
 import {addScript, addScriptSync} from "./protyle/util/addScript";
 import {genUUID} from "./util/genID";
 import {fetchGet, fetchPost} from "./util/fetch";
@@ -266,13 +265,12 @@ export class App {
                         await ensureOnboarding();
                         setNoteBook(() => {
                             onGetConfig(response.data.start, this);
-                            onSetaccount();
                             setTitle("", true);
                             initMessage();
                             /// #if BROWSER && !MOBILE
                             if (!isInMobileApp() && !window.siyuan.config.readonly && !window.siyuan.isPublish && !isChromeBrowser()
                                 && window.siyuan.config.appearance.notifications?.browserCompatibility !== false) {
-                                showMessage(window.siyuan.languages.useChrome, 0, "error");
+                                // showMessage(window.siyuan.languages.useChrome, 0, "error");
                             }
                             /// #endif
                         });

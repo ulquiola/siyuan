@@ -1195,6 +1195,7 @@ func IsSubscriber() bool {
 }
 
 func IsPaidUser() bool {
+	return true
 	if IsSubscriber() {
 		return true
 	}

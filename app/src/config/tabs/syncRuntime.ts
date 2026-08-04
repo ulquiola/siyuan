@@ -1,10 +1,6 @@
 import {fetchPost} from "../../util/fetch";
 import {processSync} from "../../dialog/processSystem";
 import {
-    onSetaccount,
-    updateAccountSwitchesVisibility,
-} from "./accountUi";
-import {
     refreshSyncModeRelatedItems,
     refreshSyncTabPanels,
 } from "./syncUi";
@@ -21,7 +17,6 @@ export const clearSyncTabElement = () => {
 export const mountSyncTabExtras = (root: HTMLElement) => {
     syncTabElement = root;
     refreshSyncTabPanels(root);
-    updateAccountSwitchesVisibility(root);
 };
 
 /** 切换同步提供商等场景：刷新云空间相关区块并重置云目录列表 */
@@ -44,7 +39,6 @@ export const patchSyncConfig = (controlId: string, value: unknown) => {
                 displayTitle,
             }, (response) => {
                 window.siyuan.config.account = response.data;
-                onSetaccount();
             });
             break;
         }
@@ -55,7 +49,6 @@ export const patchSyncConfig = (controlId: string, value: unknown) => {
                 displayVIP,
             }, (response) => {
                 window.siyuan.config.account = response.data;
-                onSetaccount();
             });
             break;
         }
