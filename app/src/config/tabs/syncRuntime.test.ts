@@ -50,9 +50,6 @@ const setup = () => {
             if (name === "./syncUi") {
                 return {refreshSyncTabPanels: () => { refreshes++; }};
             }
-            if (name === "./accountUi") {
-                return {updateAccountPanelVisibility: () => {}};
-            }
             if (name === "../../sync/syncGuide") {
                 return {refreshSyncCloudDirBlock: () => {}};
             }
