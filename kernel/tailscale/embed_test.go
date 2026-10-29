@@ -22,12 +22,34 @@ import (
 	"context"
 	"io"
 	"net"
+	"net/http"
 	"net/netip"
 	"testing"
 	"time"
 
 	"tailscale.com/ipn/ipnstate"
+	"tailscale.com/net/tshttpproxy"
 )
+
+func TestConfigureSelfProxySkipsOwnSOCKSListener(t *testing.T) {
+	t.Setenv("HTTP_PROXY", "socks5://127.0.0.1:1055")
+	t.Setenv("HTTPS_PROXY", "socks5://127.0.0.1:1055")
+	t.Setenv("NO_PROXY", "")
+
+	configureSelfProxy("127.0.0.1:1055")
+
+	request, err := http.NewRequest(http.MethodGet, "https://controlplane.tailscale.com/key", nil)
+	if nil != err {
+		t.Fatalf("create request: %s", err)
+	}
+	proxy, err := tshttpproxy.ProxyFromEnvironment(request)
+	if nil != err {
+		t.Fatalf("lookup proxy: %s", err)
+	}
+	if nil != proxy {
+		t.Fatalf("expected direct connection, got proxy [%s]", proxy)
+	}
+}
 
 func TestStatusFromState(t *testing.T) {
 	running := statusFromState(&ipnstate.Status{

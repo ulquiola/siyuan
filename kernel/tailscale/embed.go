@@ -30,6 +30,7 @@ import (
 	"github.com/siyuan-note/logging"
 	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/net/socks5"
+	"tailscale.com/net/tshttpproxy"
 	"tailscale.com/tsnet"
 )
 
@@ -109,6 +110,9 @@ func Apply(configDir string) {
 	if nil == config || !config.IsEnabled() {
 		return
 	}
+
+	// 控制面请求不能走本项目自己提供的 SOCKS 端口，否则节点上线前会形成自环
+	configureSelfProxy(config.Listen)
 
 	listener, err := net.Listen("tcp", config.Listen)
 	if nil != err {
@@ -195,6 +199,15 @@ func setLastError(err error) {
 	lastErr = err.Error()
 	nodeMu.Unlock()
 	logging.LogWarnf("tailscale: %s", err)
+}
+
+// configureSelfProxy 让 Tailscale 自身的控制面连接绕过思源配置的代理。
+//
+// 当代理地址等于本项目的 SOCKS 监听地址时，控制请求会等待节点上线，而节点上线又依赖控制请求，
+// 形成死锁；SetSelfProxy 会在 Tailscale 内部的代理配置中清除这个自指代理。
+func configureSelfProxy(listen string) {
+	tshttpproxy.SetSelfProxy(listen,
+		"http://"+listen, "https://"+listen, "socks5://"+listen, "socks5h://"+listen)
 }
 
 func serveSOCKS(listener net.Listener, dial func(ctx context.Context, network, address string) (net.Conn, error)) error {
