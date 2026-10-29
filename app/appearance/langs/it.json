@@ -2778,7 +2778,7 @@
 	"mobileModeTip": "Disattiva per utilizzare il layout mobile",
 	"checkUpdate": "Controlla aggiornamenti",
 	"currentVer": "Versione corrente",
-	"downloadLatestVer": "<a href=\"https://b3log.org/siyuan/en/download.html\" target=\"_blank\">Scarica l'ultima versione</a>",
+	"downloadLatestVer": "<a href=\"https://github.com/ulquiola/siyuan/releases/latest\" target=\"_blank\">Scarica l'ultima versione</a>",
 	"themeLight": "Chiaro",
 	"themeDark": "Scuro",
 	"themeOS": "Segui il sistema",

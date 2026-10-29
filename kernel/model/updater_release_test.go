@@ -24,41 +24,12 @@ import (
 	"testing"
 
 	"github.com/siyuan-note/siyuan/kernel/conf"
-	"github.com/siyuan-note/siyuan/kernel/util"
 )
 
 func TestGetUpdatePackageURLs(t *testing.T) {
-	originalRegion := util.CurrentCloudRegion
-	t.Cleanup(func() { util.CurrentCloudRegion = originalRegion })
-	for _, region := range []int{0, 1} {
-		util.CurrentCloudRegion = region
-		for _, version := range []string{"3.8.7", "3.8.7-rc.1", "3.8.7-beta.4", "3.8.7-alpha.9"} {
-			for _, suffix := range []string{"win.exe", "win-arm64.exe", "mac.dmg", "mac-arm64.dmg"} {
-				pkgName := "siyuan-" + version + "-" + suffix
-				githubURL := "https://github.com/siyuan-note/siyuan/releases/download/v" + version + "/" + pkgName
-				want := []string{
-					"https://release.b3log.org/siyuan/" + pkgName,
-					"https://release.liuyun.io/siyuan/" + pkgName,
-					githubURL,
-				}
-				if got := getUpdatePackageURLs(pkgName, githubURL); !slices.Equal(got, want) {
-					t.Fatalf("region [%d] version [%s] package [%s]: got %v, want %v", region, version, pkgName, got, want)
-				}
-			}
-		}
-	}
-}
-
-func TestGetUpdatePackageURLsPreservesReleaseAssetURL(t *testing.T) {
-	const pkgName = "siyuan-3.8.7-alpha.9-win.exe"
-	const githubURL = "https://github.com/siyuan-note/siyuan/releases/download/custom-tag/" + pkgName
-	want := []string{
-		"https://release.b3log.org/siyuan/" + pkgName,
-		"https://release.liuyun.io/siyuan/" + pkgName,
-		githubURL,
-	}
-	if got := getUpdatePackageURLs(pkgName, githubURL); !slices.Equal(got, want) {
-		t.Fatalf("got %v, want %v", got, want)
+	const assetURL = "https://github.com/ulquiola/siyuan/releases/download/v3.8.8/siyuan-3.8.8-win.exe"
+	if got := getUpdatePackageURLs(assetURL); !slices.Equal(got, []string{assetURL}) {
+		t.Fatalf("got %v, want [%s]", got, assetURL)
 	}
 }
 

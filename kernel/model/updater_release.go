@@ -33,14 +33,14 @@ import (
 	"github.com/siyuan-note/httpclient"
 	"github.com/siyuan-note/logging"
 	"github.com/siyuan-note/siyuan/kernel/conf"
-	"github.com/siyuan-note/siyuan/kernel/util"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/singleflight"
 )
 
 const (
-	githubReleasesURL            = "https://api.github.com/repos/siyuan-note/siyuan/releases?per_page=100"
-	githubReleaseURLPrefix       = "https://github.com/siyuan-note/siyuan/releases/tag/v"
+	githubRepo                   = "ulquiola/siyuan"
+	githubReleasesURL            = "https://api.github.com/repos/" + githubRepo + "/releases?per_page=100"
+	githubReleaseURLPrefix       = "https://github.com/" + githubRepo + "/releases/tag/v"
 	githubAPIReleaseCacheSeconds = int64(6 * 60 * 60)
 	maxChecksumManifestSize      = int64(1024 * 1024)
 )
@@ -79,10 +79,11 @@ var (
 	githubManifestCache     sync.Map
 )
 
+// getUpdateRelease 从本仓库的 GitHub Releases 中选择当前更新通道对应的最新版本。
 func getUpdateRelease(force bool) (*updateRelease, error) {
 	channel := Conf.System.Load().UpdateChannel
-	if conf.UpdateChannelStable == channel {
-		return getStableUpdateRelease(force)
+	if "" == channel {
+		channel = conf.UpdateChannelStable
 	}
 	if !isValidUpdateChannel(channel) {
 		return nil, errors.New("update channel is invalid")
@@ -90,70 +91,9 @@ func getUpdateRelease(force bool) (*updateRelease, error) {
 	return getGitHubUpdateRelease(channel, force)
 }
 
-func getStableUpdateRelease(force bool) (*updateRelease, error) {
-	result, err := util.GetRhyResult(context.TODO(), force)
-	if err != nil {
-		return nil, err
-	}
-	version, ok := result["ver"].(string)
-	normalizedVersion := normalizeReleaseVersion(version)
-	if !ok || !semver.IsValid(normalizedVersion) || "" != semver.Prerelease(normalizedVersion) {
-		return nil, errors.New("stable release version is invalid")
-	}
-	version = strings.TrimPrefix(normalizedVersion, "v")
-
-	release := &updateRelease{
-		Version:    version,
-		Channel:    conf.UpdateChannelStable,
-		ReleaseURL: getStableReleaseURL(result, version),
-		Packages:   map[string]*updatePackage{},
-	}
-	pkgName := currentInstallPackageName(release.Version)
-	if "" == pkgName {
-		return release, nil
-	}
-	checksum := getStablePackageChecksum(result, pkgName)
-	if "" == checksum {
-		return release, nil
-	}
-	githubURL := "https://github.com/siyuan-note/siyuan/releases/download/v" + version + "/" + pkgName
-	release.Packages[pkgName] = &updatePackage{
-		URLs:     getUpdatePackageURLs(pkgName, githubURL),
-		Checksum: checksum,
-	}
-	return release, nil
-}
-
-func getStableReleaseURL(result map[string]any, version string) string {
-	releaseURL, _ := result["release"].(string)
-	if localized, ok := result["release_"+Conf.Lang].(string); ok && "" != localized {
-		releaseURL = localized
-	} else if localized, ok = result["release_"+util.LangToLegacy(Conf.Lang)].(string); ok && "" != localized {
-		// 兼容云端 JSON 数据中历史下划线 key（release_zh_CN 等）。
-		releaseURL = localized
-	}
-	if "" == releaseURL {
-		releaseURL = githubReleaseURLPrefix + strings.TrimPrefix(version, "v")
-	}
-	return releaseURL
-}
-
-func getStablePackageChecksum(result map[string]any, pkgName string) string {
-	checksums, ok := result["checksums"].(map[string]any)
-	if !ok {
-		return ""
-	}
-	checksum, ok := checksums[pkgName].(string)
-	if !ok {
-		return ""
-	}
-	return normalizeSHA256(checksum)
-}
-
-func getUpdatePackageURLs(pkgName, githubURL string) []string {
-	b3logURL := "https://release.b3log.org/siyuan/" + pkgName
-	liuyunURL := "https://release.liuyun.io/siyuan/" + pkgName
-	return []string{b3logURL, liuyunURL, githubURL}
+// getUpdatePackageURLs 只返回本仓库的发布资产地址，避免回落到上游镜像下载到错误的安装包。
+func getUpdatePackageURLs(githubURL string) []string {
+	return []string{githubURL}
 }
 
 func getGitHubUpdateRelease(channel string, force bool) (*updateRelease, error) {
@@ -195,7 +135,7 @@ func getGitHubUpdateRelease(channel string, force bool) (*updateRelease, error) 
 		}
 	}
 	release.Packages[pkgName] = &updatePackage{
-		URLs:     getUpdatePackageURLs(pkgName, asset.BrowserDownloadURL),
+		URLs:     getUpdatePackageURLs(asset.BrowserDownloadURL),
 		Checksum: checksum,
 	}
 	return release, nil
