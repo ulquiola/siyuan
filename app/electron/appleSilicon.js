@@ -1,12 +1,5 @@
-const prereleasePattern = /-(?:alpha|beta|rc)(?:[.-]|\d|$)/i;
-
-const getAppleSiliconDownloadURL = (version) => {
-    const packageName = `siyuan-${version}-mac-arm64.dmg`;
-    if (prereleasePattern.test(version)) {
-        return `https://github.com/siyuan-note/siyuan/releases/download/v${version}/${packageName}`;
-    }
-    return `https://release.liuyun.io/siyuan/${packageName}`;
-};
+const getAppleSiliconDownloadURL = (version) =>
+    `https://github.com/ulquiola/siyuan/releases/download/v${version}/siyuan-${version}-mac-arm64.dmg`;
 
 const shouldDownloadAppleSilicon = (response) => response === 0;
 

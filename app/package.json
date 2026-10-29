@@ -39,6 +39,8 @@
     "dist-arm64": "cross-env ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-builder --arm64 --config electron-builder-arm64.yml --publish=never",
     "dist-darwin": "ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-builder --mac --config electron-builder-darwin.yml --publish=never",
     "dist-darwin-arm64": "ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-builder --arm64 --mac --config electron-builder-darwin-arm64.yml --publish=never",
+    "dist-darwin-unsigned": "ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-builder --mac --config electron-builder-darwin-unsigned.yml --publish=never",
+    "dist-darwin-arm64-unsigned": "ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-builder --arm64 --mac --config electron-builder-darwin-arm64-unsigned.yml --publish=never",
     "dist-linux": "ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-builder --linux --config electron-builder-linux.yml --publish=never",
     "dist-linux-arm64": "ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-builder --arm64 --linux --config electron-builder-linux-arm64.yml --publish=never"
   },

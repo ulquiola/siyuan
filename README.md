@@ -1,559 +1,138 @@
-<p align="center">
-<img alt="SiYuan" src="https://b3log.org/images/brand/siyuan-128.png">
-<br>
-<em>From thought to insight, with agents</em>
-<br><br>
-<a title="Build Status" target="_blank" href="https://github.com/siyuan-note/siyuan/actions/workflows/cd.yml"><img src="https://img.shields.io/github/actions/workflow/status/siyuan-note/siyuan/cd.yml?style=flat-square"></a>
-<a title="Releases" target="_blank" href="https://github.com/siyuan-note/siyuan/releases"><img src="https://img.shields.io/github/release/siyuan-note/siyuan.svg?style=flat-square&color=9CF"></a>
-<a title="Downloads" target="_blank" href="https://github.com/siyuan-note/siyuan/releases"><img src="https://img.shields.io/github/downloads/siyuan-note/siyuan/total.svg?style=flat-square&color=blueviolet"></a>
-<br>
-<a title="Docker Pulls" target="_blank" href="https://hub.docker.com/r/b3log/siyuan"><img src="https://img.shields.io/docker/pulls/b3log/siyuan.svg?style=flat-square&color=green"></a>
-<a title="Docker Image Size" target="_blank" href="https://hub.docker.com/r/b3log/siyuan"><img src="https://img.shields.io/docker/image-size/b3log/siyuan.svg?style=flat-square&color=ff96b4"></a>
-<a title="Hits" target="_blank" href="https://github.com/siyuan-note/siyuan"><img src="https://hits.b3log.org/siyuan-note/siyuan.svg"></a>
-<br>
-<a title="AGPLv3" target="_blank" href="https://www.gnu.org/licenses/agpl-3.0.txt"><img src="https://img.shields.io/badge/license-AGPLv3-orange.svg?style=flat-square"></a>
-<a title="Code Size" target="_blank" href="https://github.com/siyuan-note/siyuan"><img src="https://img.shields.io/github/languages/code-size/siyuan-note/siyuan.svg?style=flat-square&color=yellow"></a>
-<a title="GitHub Pull Requests" target="_blank" href="https://github.com/siyuan-note/siyuan/pulls"><img src="https://img.shields.io/github/issues-pr-closed/siyuan-note/siyuan.svg?style=flat-square&color=FF9966"></a>
-<br>
-<a title="GitHub Commits" target="_blank" href="https://github.com/siyuan-note/siyuan/commits/master"><img src="https://img.shields.io/github/commit-activity/m/siyuan-note/siyuan.svg?style=flat-square"></a>
-<a title="Last Commit" target="_blank" href="https://github.com/siyuan-note/siyuan/commits/master"><img src="https://img.shields.io/github/last-commit/siyuan-note/siyuan.svg?style=flat-square&color=FF9900"></a>
-<br><br>
-<a title="X" target="_blank" href="https://x.com/b3logos"><img alt="X Follow" src="https://img.shields.io/twitter/follow/b3logos?label=Follow&style=social"></a>
-<br><br>
-<a href="https://trendshift.io/repositories/3949" target="_blank"><img src="https://trendshift.io/api/badge/repositories/3949" alt="siyuan-note%2Fsiyuan | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</p>
+# SiYuan
 
-<p align="center">
-<b>English</b>
-| <a href="README.zh-CN.md">中文</a>
-| <a href="README.ja.md">日本語</a>
-| <a href="README.tr.md">Türkçe</a>
-| <a href="README.pt-BR.md">Português</a>
-</p>
+本仓库为 SiYuan 项目（内核 + 前端）的源码与部署辅助文件集合，基于上游 v3.8.9，并包含少量自用调整：
 
----
+- 移除设置中的账户与订阅入口；
+- 第三方同步不依赖社区账号和付费校验；
+- 桌面版内核内置 Tailscale（tsnet），可在 设置 - 应用 - Tailscale 中启用并查看状态，无需管理员权限即可通过本机 SOCKS5 代理访问 Tailnet；
+- 应用内的检查更新、自动下载安装包和下载链接都指向本仓库的 GitHub Releases；
+- Docker 构建适配国内网络与 amd64 原生编译。
 
-## Table of Contents
+版本号跟随上游，当前为 `3.8.9`；推送 `v*` 标签会触发 `Release` 工作流，构建 Windows 与 macOS 安装包并创建 GitHub Release。
 
-- [💡 Introduction](#-introduction)
-- [🔮 Features](#-features)
-- [🏗️ Architecture and Ecosystem](#-architecture-and-ecosystem)
-- [🗺️ Roadmap](#️-roadmap)
-- [🚀 Download Setup](#-download-setup)
-  - [App Market](#app-market)
-  - [Installation Package](#installation-package)
-  - [Package Manager](#package-manager)
-  - [Docker Hosting](#docker-hosting)
-  - [Kubernetes Hosting](#kubernetes-hosting)
-  - [Unraid Hosting](#unraid-hosting)
-  - [TrueNAS Hosting](#truenas-hosting)
-  - [Test Channels](#test-channels)
-- [⌨️ Command-line Interface](#-command-line-interface)
-- [🏘️ Community](#️-community)
-- [🛠️ Development Guide](#️-development-guide)
-- [❓ FAQ](#-faq)
-  - [How does SiYuan store data?](#how-does-siyuan-store-data)
-  - [Does it support data synchronization through a third-party sync disk?](#does-it-support-data-synchronization-through-a-third-party-sync-disk)
-  - [Is SiYuan open source?](#is-siyuan-open-source)
-  - [How to upgrade to a new version?](#how-to-upgrade-to-a-new-version)
-  - [What if some blocks (such as paragraph blocks in list items) cannot find the block icon?](#what-if-some-blocks-such-as-paragraph-blocks-in-list-items-cannot-find-the-block-icon)
-  - [What should I do if the data repo key is lost?](#what-should-i-do-if-the-data-repo-key-is-lost)
-  - [Do I need to pay for it?](#do-i-need-to-pay-for-it)
-- [🙏 Acknowledgement](#-acknowledgement)
-  - [Contributors](#contributors)
+目录说明：
 
----
+- `kernel/`：Go 服务端，负责数据存储、同步、API、OCR 等；
+- `app/`：Electron/TypeScript 前端，包含编辑器与导出渲染器；
+- `scripts/`：构建、打包、发布与检查脚本。
 
-## 💡 Introduction
+## 快速开始
 
-SiYuan is a privacy-first personal knowledge management system, supporting fine-grained block-level reference and Markdown
-WYSIWYG.
+### 容器运行
 
-![feature0.png](screenshots/feature0.png)
-
-![feature5-1.png](screenshots/feature5-1.png)
-
-To learn more, read the [online user guide](https://siyuan-en.b3log.org/) or join the [SiYuan English Discussion Forum](https://liuyun.io).
-
-## 🔮 Features
-
-Most features are free, even for commercial use.
-
-- Content block
-  - Block-level reference and two-way links
-  - Custom attributes
-  - SQL query embed
-  - Protocol `siyuan://`
-- Editor
-  - Block-style
-  - Markdown WYSIWYG
-  - List outline
-  - Block zoom-in
-  - Million-word large document editing
-  - Mathematical formulas, charts, flowcharts, Gantt charts, timing charts, staves, etc.
-  - Web clipping
-  - PDF Annotation link
-- Export
-  - Block ref and embed
-  - Standard Markdown with assets
-  - PDF, Word and HTML
-  - Copy to WeChat MP, Zhihu and Yuque
-- Database
-  - Table view
-- Flashcard spaced repetition
-- AI writing and Q/A chat via OpenAI API
-- Tesseract OCR 
-- Multi-tab, drag and drop to split screen
-- Template snippet
-- JavaScript/CSS snippet
-- Android/iOS/HarmonyOS App
-- Docker deployment
-- [API](https://github.com/siyuan-note/siyuan/blob/master/docs/API.md)
-- Community marketplace
-
-Some features are only available to paid members, for more details please refer to [Pricing](https://b3log.org/siyuan/en/pricing.html).
-
-## 🏗️ Architecture and Ecosystem
-
-![SiYuan Arch](screenshots/SiYuan_Arch.svg "SiYuan Arch")
-
-| Project                                                  | Description           | Forks                                                                           | Stars                                                                                | 
-|----------------------------------------------------------|-----------------------|---------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
-| [lute](https://github.com/88250/lute)                    | Editor engine         | ![GitHub forks](https://img.shields.io/github/forks/88250/lute)                 | ![GitHub Repo stars](https://img.shields.io/github/stars/88250/lute)                 |
-| [chrome](https://github.com/siyuan-note/siyuan-chrome)   | Chrome/Edge extension | ![GitHub forks](https://img.shields.io/github/forks/siyuan-note/siyuan-chrome)  | ![GitHub Repo stars](https://img.shields.io/github/stars/siyuan-note/siyuan-chrome)  |
-| [bazaar](https://github.com/siyuan-note/bazaar)          | Community marketplace | ![GitHub forks](https://img.shields.io/github/forks/siyuan-note/bazaar)         | ![GitHub Repo stars](https://img.shields.io/github/stars/siyuan-note/bazaar)         |
-| [dejavu](https://github.com/siyuan-note/dejavu)          | Data repo             | ![GitHub forks](https://img.shields.io/github/forks/siyuan-note/dejavu)         | ![GitHub Repo stars](https://img.shields.io/github/stars/siyuan-note/dejavu)         |
-| [petal](https://github.com/siyuan-note/petal)            | Plugin API            | ![GitHub forks](https://img.shields.io/github/forks/siyuan-note/petal)          | ![GitHub Repo stars](https://img.shields.io/github/stars/siyuan-note/petal)          |
-| [android](https://github.com/siyuan-note/siyuan-android) | Android App           | ![GitHub forks](https://img.shields.io/github/forks/siyuan-note/siyuan-android) | ![GitHub Repo stars](https://img.shields.io/github/stars/siyuan-note/siyuan-android) |
-| [ios](https://github.com/siyuan-note/siyuan-ios)         | iOS App               | ![GitHub forks](https://img.shields.io/github/forks/siyuan-note/siyuan-ios)     | ![GitHub Repo stars](https://img.shields.io/github/stars/siyuan-note/siyuan-ios)     |
-| [harmony](https://github.com/siyuan-note/siyuan-harmony) | HarmonyOS App         | ![GitHub forks](https://img.shields.io/github/forks/siyuan-note/siyuan-harmony) | ![GitHub Repo stars](https://img.shields.io/github/stars/siyuan-note/siyuan-harmony) |
-| [riff](https://github.com/siyuan-note/riff)              | Spaced repetition     | ![GitHub forks](https://img.shields.io/github/forks/siyuan-note/riff)           | ![GitHub Repo stars](https://img.shields.io/github/stars/siyuan-note/riff)           |
-
-## 🗺️ Roadmap
-
-- [SiYuan development plan and progress](https://github.com/orgs/siyuan-note/projects/1)
-- [SiYuan changelog](CHANGELOG.md)
-
-## 🚀 Download Setup
-
-It is recommended to give priority to installing through the application market on desktop and mobile, so that you can upgrade the version with one click in the future.
-
-### App Market
-
-Mobile:
-
-- [App Store](https://apps.apple.com/us/app/siyuan/id1583226508)
-- [Google Play](https://play.google.com/store/apps/details?id=org.b3log.siyuan)
-- [F-Droid](https://f-droid.org/packages/org.b3log.siyuan)
-
-Desktop:
-
-- [Microsoft Store](https://apps.microsoft.com/detail/9p7hpmxp73k4)
-
-### Installation Package
-
-- [B3log](https://b3log.org/siyuan/en/download.html)
-- [GitHub](https://github.com/siyuan-note/siyuan/releases)
-
-### Package Manager
-
-#### `siyuan`
-
-[![Packaging status](https://repology.org/badge/vertical-allrepos/siyuan.svg)](https://repology.org/project/siyuan/versions)
-
-#### `siyuan-note`
-
-[![Packaging status](https://repology.org/badge/vertical-allrepos/siyuan-note.svg)](https://repology.org/project/siyuan-note/versions)
-
-### Docker Hosting
-
-<details>
-<summary>Docker Deployment</summary>
-
-#### Overview
-
-The easiest way to serve SiYuan on a server is to deploy it through Docker.
-
-- Image name `b3log/siyuan`
-- [Image URL](https://hub.docker.com/r/b3log/siyuan)
-
-#### File structure
-
-The overall program is located under `/opt/siyuan/`, which is basically the structure under the resources folder of the Electron installation package:
-
-- appearance: icon, theme, languages
-- guide: user guide document
-- stage: interface and static resources
-- kernel: kernel program
-
-#### Entrypoint
-
-The entry point is set when building the Docker image: `ENTRYPOINT ["/opt/siyuan/entrypoint.sh"]`. This script allows changing the `PUID` and `PGID` of the user that will run inside the container. This is especially relevant to solve permission issues when mounting directories from the host. The `PUID` (User ID) and `PGID` (Group ID) can be passed as environment variables, making it easier to ensure correct permissions when accessing host-mounted directories.
-
-Use the following parameters when running the container with `docker run b3log/siyuan`:
-
-> **Note:** Since v3.7.0, the `serve` subcommand must be passed explicitly (e.g. `docker run b3log/siyuan serve --workspace=...`). Run `docker run --rm b3log/siyuan serve --help` to see all serving options.
-
-- `--workspace`: Specifies the workspace folder path, mounted to the container via `-v` on the host
-- `--accessAuthCode`: Specifies the lock screen password
-
-More parameters can be found using `--help`. Here’s an example of a startup command with the new environment variables:
-
-First set `AuthCode` to your own strong password (use `export AuthCode='your-strong-password'` in Bash; Compose can also read a `.env` file in the same directory). The example stops with an error if the value is unset or empty.
-
-```bash
-docker run -d \
-  -v workspace_dir_host:workspace_dir_container \
-  -p 6806:6806 \
-  -e PUID=1001 -e PGID=1002 \
-  b3log/siyuan \
-  serve \
-  --workspace=workspace_dir_container \
-  --accessAuthCode="${AuthCode:?Set AuthCode}"
-```
-
-- `PUID`: Custom user ID (optional, defaults to `1000` if not provided)
-- `PGID`: Custom group ID (optional, defaults to `1000` if not provided)
-- `workspace_dir_host`: The workspace folder path on the host
-- `workspace_dir_container`: The path of the workspace folder in the container, as specified in `--workspace`
-  - Alternatively, it's possible to set the path via the `SIYUAN_WORKSPACE_PATH` env variable. The commandline will always have the priority, if both are set
-- `accessAuthCode`: Lock screen password (please **be sure to modify**, otherwise anyone can access your data)
-  - Alternatively, it's possible to set the lock screen password via the `SIYUAN_ACCESS_AUTH_CODE` env variable. The commandline will always have the priority, if both are set
-  - To disable the lock screen password set the env variable `SIYUAN_ACCESS_AUTH_CODE_BYPASS=true`
-- OIDC can replace the lock screen password as the required Docker access authentication. Set `SIYUAN_OIDC_ENABLED=true`, `SIYUAN_OIDC_PROVIDER` (`custom`, `google`, `microsoft`, or `github`), `SIYUAN_OIDC_CLIENT_ID`, and the provider-specific values below. GitHub uses its OAuth 2.0 user API adapter; the other providers use OpenID Connect discovery and ID Token validation. An invalid enabled configuration stops Docker startup when no lock screen password is available
-  - `SIYUAN_OIDC_ISSUER_URL`: Issuer URL required by the `custom` and `microsoft` providers; Microsoft must use a tenant-specific issuer such as `https://login.microsoftonline.com/<tenant-id>/v2.0`
-  - `SIYUAN_OIDC_CLIENT_SECRET`: Optional client secret for OpenID Connect providers; required by the GitHub OAuth adapter. Every authorization-code flow also uses PKCE
-  - `SIYUAN_OIDC_SCOPES`: Comma- or space-separated scopes; `openid` is always included
-  - `SIYUAN_OIDC_REDIRECT_URL`: Public HTTPS callback URL ending in `/api/system/oidc/callback`, required for remote browser access
-  - `SIYUAN_OIDC_ALLOW_ALL`: Explicitly grant SiYuan administrator access to every identity authenticated by the provider
-  - `SIYUAN_OIDC_CLAIM_RULES`: JSON array of claim rules used when allow-all is disabled, for example `[{"claim":"email","operator":"equals","values":["user@example.com"]},{"claim":"email_verified","operator":"equals","values":["true"]}]`; values within a rule use OR, while rules use AND
-  - Native mobile apps use the fixed callback URI `siyuan:/oidc-callback`; register it exactly as written. Mobile configuration verification uses this callback before saving. Custom providers, Microsoft, and GitHub can be used only when their application registration accepts this callback URI. Google does not accept this private-use URI for its Android client type, so Google login is limited to browser and desktop flows
-- `SIYUAN_LANG`: Interface language (optional, defaults to `en` if unset in Docker). Accepts BCP 47 tags like `zh-CN`/`zh-TW`/`en`/`ja`/`pt-BR`; legacy underscore values like `zh_CN`/`en_US` are also accepted for backward compatibility. Omit it if you want the language chosen in **Settings** to persist across restarts; if set, it is applied on every startup and overrides the saved setting
-  - Alternatively, use the `--lang` command-line parameter. If both are set, the command-line takes priority
-
-To simplify things, it is recommended to configure the workspace folder path to be consistent on the host and container, such as having both `workspace_dir_host` and `workspace_dir_container` configured as `/siyuan/workspace`. The corresponding startup command would be:
-
-First set `AuthCode` to your own strong password (use `export AuthCode='your-strong-password'` in Bash; Compose can also read a `.env` file in the same directory). The example stops with an error if the value is unset or empty.
-
-```bash
-docker run -d \
-  -v /siyuan/workspace:/siyuan/workspace \
-  -p 6806:6806 \
-  -e PUID=1001 -e PGID=1002 \
-  b3log/siyuan \
-  serve \
-  --workspace=/siyuan/workspace/ \
-  --accessAuthCode="${AuthCode:?Set AuthCode}"
-```
-
-#### Docker Compose
-
-For users running SiYuan with Docker Compose, the environment variables `PUID` and `PGID` can be passed to customize the user and group IDs. Here's an example of a Docker Compose configuration:
-
-First set `AuthCode` to your own strong password (use `export AuthCode='your-strong-password'` in Bash; Compose can also read a `.env` file in the same directory). The example stops with an error if the value is unset or empty.
-
-```yaml
-version: "3.9"
-services:
-  main:
-    image: b3log/siyuan
-    command: ['serve', '--workspace=/siyuan/workspace/', '--accessAuthCode=${AuthCode:?Set AuthCode}']
-    ports:
-      - 6806:6806
-    volumes:
-      - /siyuan/workspace:/siyuan/workspace
-    restart: unless-stopped
-    environment:
-      - TZ=${YOUR_TIME_ZONE}    # A list of time zone identifiers can be found at https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-      - PUID=${YOUR_USER_PUID}  # Customize user ID
-      - PGID=${YOUR_USER_PGID}  # Customize group ID
-```
-
-In this setup:
-
-- `PUID` and `PGID` are set dynamically and passed to the container
-- If these variables are not provided, the default `1000` will be used
-
-By specifying `PUID` and `PGID` in the environment, you avoid the need to explicitly set the `user` directive (`user: '1000:1000'`) in the compose file. The container will dynamically adjust the user and group based on these environment variables at startup.
-
-#### User Permissions
-
-In the image, the `entrypoint.sh` script ensures the creation of the `siyuan` user and group with the specified `PUID` and `PGID`. Therefore, when the host creates a workspace folder, pay attention to setting the user and group ownership of the folder to match the `PUID` and `PGID` you plan to use. For example:
-
-```bash
-chown -R 1001:1002 /siyuan/workspace
-```
-
-If you use custom `PUID` and `PGID` values, the entrypoint script will ensure that the correct user and group are created inside the container, and ownership of mounted volumes will be adjusted accordingly. There’s no need to manually pass `-u` in `docker run` or `docker-compose` as the environment variables will handle the customization.
-
-#### Hidden port
-
-Use an NGINX reverse proxy to hide port 6806. Please note:
-
-- Configure the WebSocket reverse proxy for `/ws`
-- Preserve the original `Host` header, including the port, for both regular requests and `/ws`. In NGINX, configure `proxy_set_header Host $http_host;` in both proxy locations. Using `$host` drops non-standard ports (such as `8443`), which can cause Origin validation to fail, leaving the page stuck on the logo with repeated reloads, API responses of `401`, or failed WebSocket connections
-
-#### Note
-
-- Be sure to confirm the correctness of the mounted volume, otherwise the data will be lost after the container is deleted
-- Do not use URL rewriting for redirection, otherwise there may be problems with authentication, it is recommended to configure a reverse proxy
-- If you encounter permission issues, verify that the `PUID` and `PGID` environment variables match the ownership of the mounted directories on your host system
-
-#### Limitations
-
-- Does not support desktop and mobile application connections, only supports use on browsers
-- Export to PDF, HTML and Word formats is not supported
-- Import Markdown file is not supported
-
-</details>
-
-### Kubernetes Hosting
-
-<details>
-<summary>Kubernetes Deployment</summary>
-
-The [HelmForge SiYuan chart](https://github.com/helmforgedev/charts/tree/main/charts/siyuan) is community-maintained by HelmForge, uses the official `b3log/siyuan` image, and is not an official SiYuan chart. Please report chart issues to [HelmForge](https://github.com/helmforgedev/charts/issues).
-
-Prepare Helm, kubectl, and a Kubernetes cluster with a default StorageClass that can provision a 10Gi ReadWriteOnce volume, then run the following commands:
-
-```bash
-helm repo add helmforge https://repo.helmforge.dev
-helm repo update
-helm install siyuan helmforge/siyuan --namespace siyuan --create-namespace --wait
-kubectl -n siyuan get secret siyuan-siyuan-auth -o go-template='{{index .data "access-code" | base64decode}}{{"\n"}}'
-kubectl -n siyuan port-forward service/siyuan-siyuan 6806:6806
-```
-
-Open <http://localhost:6806> and enter the generated lock screen password. Keep this password secure; it is distinct from the API token. The names above assume the default chart values and release name `siyuan`.
-
-For remote access, use a dedicated HTTPS hostname and an Ingress controller that proxies WebSockets on `/ws`, without URL rewriting. Configure `ingress` and allow the controller's namespace through `networkPolicy.ingressFrom`; the default policy allows same-namespace ingress and DNS egress only. Add explicit egress rules for cloud sync or other external services. See the [chart guide and production example](https://helmforge.dev/docs/charts/siyuan) for TLS, existing Secrets, and storage configuration.
-
-- **One workspace, one writer:** Never scale replicas or mount the same workspace in another running instance, even with ReadWriteMany storage. The chart uses `Recreate`, so upgrades stop the old writer before starting the new one and cause downtime.
-- **Persistence:** The complete workspace is mounted at `/siyuan/workspace`. The chart retains its generated PVC on uninstall by default; deleting the namespace or PVC can still destroy data. Reuse a retained or restored claim with `persistence.existingClaim`.
-- **Backups and upgrades:** Gracefully stop the writer before backing up the complete workspace, or use an application-consistent backup procedure. A copy of the live SQLite index alone is insufficient. Securely preserve authentication Secrets, encryption keys, and encrypted-notebook recovery passwords, and test restores into a separate PVC. Back up before upgrades and review storage-format changes: Helm rollback does not undo data migrations.
-
-The Docker hosting limitations also apply: browser use only, no desktop or mobile application connections, no PDF/HTML/Word export, and no Markdown file import.
-
-</details>
-
-### Unraid Hosting
-
-<details>
-<summary>Unraid Deployment</summary>
-
-Note: First run `chown -R 1000:1000 /mnt/user/appdata/siyuan` in the terminal
-
-Template reference:
-
-```
-Web UI: 6806
-Container Port: 6806
-Container Path: /siyuan/workspace
-Host path: /mnt/user/appdata/siyuan
-PUID: 1000
-PGID: 1000
-Publish parameters: serve --accessAuthCode=******(Lock screen password)
-```
-
-</details>
-
-### TrueNAS Hosting
-
-<details>
-<summary>TrueNAS Deployment</summary>
-
-Note: First, run the commands below in the TrueNAS Shell. Please update `Pool_1/Apps_Data/siyuan` to match your dataset path.
-
-```shell
-zfs create Pool_1/Apps_Data/siyuan
-chown -R 1001:1002 /mnt/Pool_1/Apps_Data/siyuan
-chmod 755 /mnt/Pool_1/Apps_Data/siyuan
-```
-
-Navigate to Apps - DiscoverApps - More Options (on top right, besides Custom App) - Install via YAML
-
-Template reference:
-
-Before deploying, fill in your own strong password after `SIYUAN_ACCESS_AUTH_CODE=` below; do not leave it empty.
+将下面的内容保存为 `docker-compose.yml`，修改工作区路径和访问密码后执行 `docker compose up -d`：
 
 ```yaml
 services:
   siyuan:
-    image: b3log/siyuan
+    image: registry.cn-hangzhou.aliyuncs.com/ulquiola/siyuan:latest
+    # image: docker.1ms.run/ulquiola/siyuan:latest
     container_name: siyuan
-    command: ['serve', '--workspace=/siyuan/workspace/']
-    ports:
-      - 6806:6806
-    volumes:
-      - /mnt/Pool_1/Apps_Data/siyuan:/siyuan/workspace  # Adjust to your dataset path 
-    restart: unless-stopped
+    restart: always
     environment:
-      - SIYUAN_ACCESS_AUTH_CODE=
-      - TZ=America/New_York  # Replace with your timezone if needed
-      - PUID=1001
-      - PGID=1002
+      - LANG=zh_CN.UTF-8
+      - LC_ALL=zh_CN.UTF-8
+    ports:
+      - "6806:6806"
+    labels:
+      watchcow.enable: "true"
+    volumes:
+      - /home/ulquiola/codespace/siyuan/workspace:/siyuan/workspace
+    command: serve --workspace=/siyuan/workspace --accessAuthCode=123456
 ```
 
-</details>
+示例命令：
 
-### Test Channels
-
-Select Beta or Alpha in `Settings - About - Update channel` to receive prereleases. Beta includes stable, RC, and Beta releases; Alpha includes all releases. Test channels require access to GitHub.
-
-## ⌨️ Command-line Interface
-
-The built-in CLI provides direct access to workspace data — no running server required.
-
-The CLI does not support operations on encrypted notebooks. Unlock and access them through the dedicated in-app workflow.
-
-### Quick Start
-
-```bash
-# List all notebooks
-siyuan notebook list -w ~/SiYuan
-
-# Full-text search with JSON output
-siyuan search "keyword" -w ~/SiYuan -f json
-
-# Search inside asset files (PDF/Word/Excel/txt etc.)
-siyuan search "phrase" --asset -w ~/SiYuan
-siyuan search "phrase" --asset --ext pdf --ext docx -w ~/SiYuan
-
-# Export a document as Markdown
-siyuan export md --id <block-id> -w ~/SiYuan
+```shell
+docker compose up -d
+docker compose logs -f siyuan
 ```
 
-### Available Commands
+访问 `http://<主机地址>:6806`。如果系统配置了 HTTP 代理，请把主机地址加入代理绕过列表，否则浏览器的 WebSocket 可能被代理拦截，页面会提示与内核的连接已断开。
 
-| Category | Commands |
-|----------|----------|
-| Notebooks & Documents | `notebook`, `document`, `dailynote` — CRUD and daily notes |
-| Content | `block`, `attr`, `outline` — block read/write, attributes, outline |
-| Metadata | `tag`, `bookmark`, `template` — tags, bookmarks, template snippets |
-| Queries | `search`, `sql` — full-text, semantic, asset-content, and SQL queries |
-| References | `ref` — backlinks and mentions |
-| Import/Export | `export`, `import`, `inbox` — Markdown, HTML, preview, Word, .sy.zip, Data, cloud inbox |
-| Data Management | `repo`, `history`, `sync` — snapshots, versions, cloud sync |
-| Utilities | `asset`, `file` — resources and file system |
-| Database | `database` — attribute view management |
-| Server | `serve` — start the kernel HTTP server |
-| Workspace & System | `workspace`, `system` — list, inspect, system info |
+### 桌面版内置 Tailscale
 
-Run `siyuan --help` for the full command tree. Use `-f json` (default is `-f table`) for script-friendly output. Most mutating commands also support `--dry-run` to preview changes without applying them.
+内核中嵌入了 Tailscale 官方的 `tsnet` 库，用用户态网络栈加入 Tailnet，不需要 WSL2、Docker 或管理员权限。启用后内核在本机监听一个 SOCKS5 端口，思源设置中的网络代理指向该端口即可访问 Tailnet 内的地址（例如 NAS 上的 S3 服务）。
 
-### Installation
+打开 设置 - 应用 - Tailscale：
 
-The CLI binary is `<install-dir>/resources/kernel/SiYuan-Kernel`, invoked via the `siyuan` command.
+- 打开"启用"开关；
+- 节点名留空时使用 `siyuan-desktop`；
+- 认证密钥填 Tailscale 管理台 Settings - Keys 中生成的 reusable key，首次加入成功后可以清空，节点状态会保存在本地；
+- 监听地址留空时使用 `127.0.0.1:1055`，只允许回环地址；
+- 状态行会显示未启用、正在连接、需要登录、已连接（含 Tailnet IP）或错误原因，需要登录时点击"打开登录链接"用浏览器完成认证。
 
-- **Windows**: the installer automatically adds the kernel directory to `PATH`, so `siyuan` works out of the box. The Microsoft Store edition (3.8.7+) registers the `siyuan.exe` app execution alias on Windows 10 1607 (build 14393) or later. After installing or updating, open a new terminal and run `siyuan --help`
-  ```powershell
-  siyuan --help
+保存后内核会立即重建内嵌节点，不需要重启思源。
 
-  # Check which command is being used
-  Get-Command siyuan -All
-  where.exe siyuan
-  ```
-  If the command is unavailable, check that the SiYuan app execution alias is enabled in Windows and `%LOCALAPPDATA%\Microsoft\WindowsApps` is in `PATH`. The commands above show command resolution; multiple SiYuan editions or `PATH` order may select another executable
+随后在 设置 - 网络代理 中选择 `socks5`、主机 `127.0.0.1`、端口 `1055`；S3 的 Endpoint 填 NAS 的 Tailnet 地址（`100.x.y.z`）。
 
-  If you created the old `siyuan.cmd` shim, first verify the Store alias directly with `& "$env:LOCALAPPDATA\Microsoft\WindowsApps\siyuan.exe" --help`, then optionally remove the shim: `Remove-Item "$env:LOCALAPPDATA\Microsoft\WindowsApps\siyuan.cmd"`
-- **macOS**: create a symlink after installing:
-  ```bash
-  ln -s /Applications/SiYuan.app/Contents/Resources/kernel/SiYuan-Kernel /usr/local/bin/siyuan
-  ```
-- **Linux**: create a symlink after installing:
-  ```bash
-  ln -s <install-dir>/resources/kernel/SiYuan-Kernel /usr/local/bin/siyuan
-  ```
+配置保存在 `~/.config/siyuan/tailscale.json`（Windows 为 `C:\Users\<用户名>\.config\siyuan\tailscale.json`），由界面写入，文件不存在时该功能完全关闭。可选字段：`stateDir` 指定节点状态目录，`enabled` 设为 `false` 临时关闭。
 
-## 🏘️ Community
+注意事项：
 
-- [English Discussion Forum](https://liuyun.io)
-- [User community summary](https://liuyun.io/article/1687779743723)
-- [Awesome SiYuan](https://github.com/siyuan-note/awesome)
+- 启动日志位于 `~/.config/siyuan/kernel.log`，搜索 `tailscale:` 可以确认节点是否上线；
+- 如果 1055 端口已被 WSL2 中的 Docker 容器占用，需要先停止该容器，否则内嵌节点无法监听；
+- 该功能需要自行构建内核。在 GitHub Actions 中手动运行 `Windows kernel` 工作流，下载构建产物后替换安装目录下的 `resources\kernel\SiYuan-Kernel.exe`。
 
-## 🛠️ Development Guide
+### 镜像构建与发布
 
-See [Development Guide](https://github.com/siyuan-note/siyuan/blob/master/.github/CONTRIBUTING.md).
+构建脚本会读取仓库根目录的 `.env`（需要 `ALIYUN_USERNAME`、`ALIYUN_PASSWORD`），登录阿里云镜像仓库，构建 `linux/amd64` 镜像并推送 `v<版本>` 与 `latest` 标签：
 
-## ❓ FAQ
+```shell
+sh scripts/docker-build.sh
+```
 
-### How does SiYuan store data?
+Dockerfile 包含前端构建、Go 内核（`fts5` + `sqlcipher`）以及 ONNX/OCR 运行时。Go 阶段在 `BUILDPLATFORM` 上原生编译并交叉编译到目标架构，避免 QEMU 模拟下的编译器问题。
 
-The data is saved in the workspace data folder:
+### 本地开发
 
-- `assets` is used to save all inserted assets
-- `emojis` is used to save emoji images
-- `snippets` is used to save code snippets
-- `storage` is used to save query conditions, layouts and flashcards, etc.
-- `templates` is used to save template snippets
-- `widgets` is used to save widgets
-- `plugins` is used to save plugins
-- `public` is used to save public data
-- Notebook folders contain the document data. Ordinary notebooks store `.sy` documents as JSON; encrypted notebooks store them as ciphertext.
+需要 Go（版本见 `kernel/go.mod`）和 Node + pnpm（版本见 `app/package.json` 的 `packageManager`）。
 
-### Does it support data synchronization through a third-party sync disk?
+前端检查（在 `app/` 目录下）：
 
-Data synchronization through third-party synchronization disks is not supported, otherwise data may be corrupted.
+```shell
+pnpm install
+pnpm run lint
+```
 
-Although it does not support third-party sync disks, it supports connecting with third-party cloud storage (Members' privileges).
+`pnpm run lint` 包含类型检查、ESLint 自动修复、CSS、菜单和启动语言检查。
 
-### Is SiYuan open source?
+内核开发（在 `kernel/` 目录下）：
 
-SiYuan is completely open source, and contributions are welcome:
+```shell
+gofmt -w .
+go build ./...
+```
 
-- [User Interface and Kernel](https://github.com/siyuan-note/siyuan)
-- [Android](https://github.com/siyuan-note/siyuan-android)
-- [iOS](https://github.com/siyuan-note/siyuan-ios)
-- [HarmonyOS](https://github.com/siyuan-note/siyuan-harmony)
-- [Chrome Clipping Extension](https://github.com/siyuan-note/siyuan-chrome)
+更多构建、打包、i18n 与发布细节请参考 `AGENTS.md` 和 `scripts/` 目录。
 
-For more details, please refer to [Development Guide](https://github.com/siyuan-note/siyuan/blob/master/.github/CONTRIBUTING.md).
+## 版本与发布
 
-### How to upgrade to a new version?
+版本号跟随上游，当前为 `3.8.9`。发布时在主仓库根目录创建并推送标签：
 
-- If installed via app store, please update via app store
-- If it is installed with the desktop installation package on Windows or macOS, you can enable the option of <kbd>Settings</kbd> - <kbd>About</kbd> - <kbd>Automatically download update installation package</kbd>, so that SiYuan will automatically download the latest version of the installation package and prompt to install
-- If it is installed by manual installation package, please download the installation package again to install
+```shell
+git tag v3.8.9
+git push github v3.8.9
+git push origin v3.8.9
+```
 
-You can <kbd>Check update</kbd> in <kbd>Settings</kbd> - <kbd>About</kbd> - <kbd>Current Version</kbd>, or pay attention to [Official Download](https://b3log.org/siyuan/en/download.html) or [GitHub Releases](https://github.com/siyuan-note/siyuan/releases) to get the new version.
+推送标签后，`Release` 工作流会并行构建 Windows x64、macOS Intel 和 macOS Apple Silicon 三个安装包，并创建 GitHub Release。资产为：
 
-**Note:** Keep your workspace outside the installation directory; updating SiYuan clears files in the installation directory.
+- `siyuan-<版本>-win.exe`：Windows x64 安装包
+- `siyuan-<版本>-mac.dmg`：macOS Intel 安装包
+- `siyuan-<版本>-mac-arm64.dmg`：macOS Apple Silicon 安装包
+- `SHA256SUMS.txt`：SHA-256 校验值
 
-### What if some blocks (such as paragraph blocks in list items) cannot find the block icon?
+安装包内已包含内置 Tailscale 的内核。macOS 安装包没有签名和公证，首次打开需要在 系统设置 - 隐私与安全性 中允许，或执行 `xattr -cr /Applications/SiYuan.app`。
 
-The block icon is omitted for the first sub-block under the list item. You can move the cursor into this block and trigger its block menu with <kbd>Ctrl+/</kbd> .
+Docker 镜像不通过该工作流发布，使用 `scripts/docker-build.sh` 推送到阿里云仓库，标签为 `v<版本>` 与 `latest`。
 
-### What should I do if the data repo key is lost?
+上游官方的正式版发布流程（`dev` 合并到 `master`、签名、公证以及 Android 与鸿蒙产物）依赖官方构建环境，不适用于本仓库。
 
-The data repo key protects snapshots and sync data. It is separate from the encrypted-notebook master password and key backups. Resetting the data repo cannot recover a lost master password or replace matching encryption key backups.
+## 贡献
 
-Before resetting, exit SiYuan normally and back up the complete workspace. If you have encrypted notebooks, also keep separate, matching encryption key backups and confirm that the master password works. Delete old cloud sync directories and snapshots only after the new sync completes, data is verified, and recovery materials are safely preserved.
+欢迎提交 Issue 或 PR，请先阅读 `.github/CONTRIBUTING.md`，并遵循 `AGENTS.md` 中的代码规范。
 
-- If the data repo key is correctly initialized on multiple devices previously, the key is the same on all devices and can be retrieved in <kbd>Settings</kbd> - <kbd>Account & Sync</kbd> - <kbd>Data repo</kbd> - <kbd>Data repo key</kbd> - <kbd>Copy key string</kbd>
-- If it has not been configured correctly before (for example, the keys on multiple devices are inconsistent) or all devices are unavailable and the key string cannot be obtained, you can reset the key by following the steps below:
+## 许可
 
-  1. Exit SiYuan normally and back up the complete workspace; for encrypted notebooks, also preserve matching encryption key backups and the master password
-  2. <kbd>Settings</kbd> - <kbd>Account & Sync</kbd> - <kbd>Data repo</kbd> - <kbd>Data repo key</kbd> - <kbd>Reset data repo</kbd>
-  3. Reinitialize the data repo key. After initializing the key on one device, other devices import the key
-  4. Use a new cloud sync directory; delete the old directory only after the new sync completes, data is verified, and recovery materials are safely preserved
-  5. Delete old cloud snapshots only after the new sync completes, data is verified, and recovery materials are safely preserved
-
-### Do I need to pay for it?
-
-Most features are free, even for commercial use.
-
-Member's privileges can only be used after payment, please refer to [Pricing](https://b3log.org/siyuan/en/pricing.html).
-
-## 🙏 Acknowledgement
-
-The birth of SiYuan is inseparable from many open source projects and contributors. Please refer to the project source code kernel/go.mod, app/package.json and project homepage.
-
-The growth of SiYuan is inseparable from user feedback and promotion. Thank you, everyone, for your help with SiYuan ❤️
-
-### Contributors
-
-Welcome to join us and contribute code to SiYuan together.
-
-<a href="https://github.com/siyuan-note/siyuan/graphs/contributors">
-   <img src="https://contrib.rocks/image?repo=siyuan-note/siyuan" />
-</a>
+本项目遵循 AGPL-3.0 许可，详见 `LICENSE`。

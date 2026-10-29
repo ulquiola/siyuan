@@ -145,6 +145,19 @@ test("network proxy hides host and port inputs unless a manual scheme is selecte
     assert.deepEqual(view.hidden, {host: [false, true], port: [false, true]});
 });
 
+test("tailscale is configurable on desktop and browser but excluded from mobile", () => {
+    for (const [browser, mobile] of [[false, false], [true, false]]) {
+        const slot = getAccessibilitySlot(browser, mobile, undefined, "tailscale");
+        assert.ok(slot);
+        const html = slot.html();
+        assert.ok(html.includes('id="tailscaleEnabled"'));
+        assert.ok(html.includes('id="tailscaleAuthKey" type="password"'));
+        assert.ok(html.includes('id="tailscaleListen"'));
+    }
+    assert.equal(getAccessibilitySlot(true, true, undefined, "tailscale"), undefined);
+    assert.equal(getAccessibilitySlot(false, true, undefined, "tailscale"), undefined);
+});
+
 const controls = () => {
     let change: () => Promise<void>;
     const input = {

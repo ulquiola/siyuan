@@ -223,6 +223,20 @@ const registerAppGeneralGroup = (tab: SettingTabBuilder) => {
         html: genNetworkProxyHtml,
         afterMount: mountNetworkProxy,
     });
+    /// #if !MOBILE
+    group.slot({
+        key: "tailscale",
+        keywords: [
+            window.siyuan.languages.tailscale,
+            window.siyuan.languages.tailscaleTip,
+            "Tailscale",
+            "SOCKS5",
+            "tskey-auth",
+        ],
+        html: genTailscaleHtml,
+        afterMount: mountTailscale,
+    });
+    /// #endif
     /// #if !BROWSER
     group.slot({
         key: "accessibilitySupport",
@@ -403,6 +417,139 @@ const mountNetworkProxy = (root: HTMLElement) => {
             /// #endif
         });
     });
+};
+
+interface ITailscaleStatus {
+    state: string;
+    authURL: string;
+    ips: string[] | null;
+    error: string;
+}
+
+interface ITailscaleData {
+    config: {enabled: boolean; hostname: string; authKey: string; listen: string};
+    status: ITailscaleStatus;
+}
+
+const genTailscaleHtml = (): string => `<div class="b3-label config-item">
+    ${genConfigItemName(window.siyuan.languages.tailscale)}
+    <div class="b3-label__text">${window.siyuan.languages.tailscaleTip}</div>
+    <div class="b3-label__text fn__flex" style="overflow: visible !important;">
+        <input id="tailscaleEnabled" class="b3-switch fn__flex-center" type="checkbox"/>
+        <span class="fn__space"></span>
+        <span>${window.siyuan.languages.enable}</span>
+        <span class="fn__flex-1"></span>
+        <button id="tailscaleConfirm" class="b3-button fn__size200 b3-button--outline">${window.siyuan.languages.confirm}</button>
+    </div>
+    <div class="b3-label__text fn__flex" style="overflow: visible !important;">
+        <input spellcheck="false" id="tailscaleHostname" placeholder="${escapeHtmlTextAndAttr(window.siyuan.languages.tailscaleHostname)}" class="b3-text-field fn__flex-1"/>
+        <span class="fn__space"></span>
+        <input spellcheck="false" id="tailscaleListen" placeholder="${escapeHtmlTextAndAttr(window.siyuan.languages.tailscaleListen)}" class="b3-text-field fn__flex-1"/>
+    </div>
+    <div class="b3-label__text fn__flex" style="overflow: visible !important;">
+        <input spellcheck="false" id="tailscaleAuthKey" type="password" autocomplete="off" placeholder="${escapeHtmlTextAndAttr(window.siyuan.languages.tailscaleAuthKey)}" class="b3-text-field fn__flex-1"/>
+    </div>
+    <div id="tailscaleStatus" class="b3-label__text" role="status"></div>
+</div>`;
+
+const mountTailscale = (root: HTMLElement) => {
+    const enabledElement = root.querySelector("#tailscaleEnabled") as HTMLInputElement;
+    const hostnameElement = root.querySelector("#tailscaleHostname") as HTMLInputElement;
+    const listenElement = root.querySelector("#tailscaleListen") as HTMLInputElement;
+    const authKeyElement = root.querySelector("#tailscaleAuthKey") as HTMLInputElement;
+    const statusElement = root.querySelector("#tailscaleStatus") as HTMLElement;
+    const confirmElement = root.querySelector("#tailscaleConfirm") as HTMLButtonElement;
+    if (!enabledElement || !hostnameElement || !listenElement || !authKeyElement || !statusElement || !confirmElement) {
+        return;
+    }
+
+    const renderStatus = (status: ITailscaleStatus) => {
+        statusElement.textContent = "";
+        switch (status.state) {
+            case "running": {
+                const ips = status.ips && status.ips.length ? ` · ${status.ips.join(", ")}` : "";
+                statusElement.textContent = `${window.siyuan.languages.tailscaleRunning}${ips}`;
+                break;
+            }
+            case "needsLogin": {
+                statusElement.textContent = window.siyuan.languages.tailscaleNeedsLogin;
+                if (status.authURL) {
+                    const link = document.createElement("a");
+                    link.className = "fn__a";
+                    link.href = status.authURL;
+                    link.target = "_blank";
+                    link.rel = "noreferrer";
+                    link.textContent = window.siyuan.languages.tailscaleOpenLogin;
+                    statusElement.appendChild(document.createTextNode(" "));
+                    statusElement.appendChild(link);
+                }
+                break;
+            }
+            case "starting":
+                statusElement.textContent = window.siyuan.languages.tailscaleStarting;
+                break;
+            case "error":
+                statusElement.textContent = status.error ?
+                    `${window.siyuan.languages.tailscaleError}: ${status.error}` : window.siyuan.languages.tailscaleError;
+                break;
+            default:
+                statusElement.textContent = window.siyuan.languages.tailscaleDisabled;
+        }
+    };
+
+    const applyData = (data: ITailscaleData) => {
+        enabledElement.checked = data.config.enabled;
+        hostnameElement.value = data.config.hostname;
+        listenElement.value = data.config.listen;
+        authKeyElement.value = data.config.authKey;
+        renderStatus(data.status);
+    };
+
+    const refresh = (withConfig: boolean) => {
+        fetchPost("/api/system/getTailscale", {}, (response) => {
+            if (0 !== response.code) {
+                renderStatus({state: "error", authURL: "", ips: null, error: response.msg});
+                return;
+            }
+            const data = response.data as ITailscaleData;
+            if (withConfig) {
+                applyData(data);
+            } else {
+                renderStatus(data.status);
+            }
+        });
+    };
+
+    confirmElement.addEventListener("click", () => {
+        confirmElement.disabled = true;
+        fetchPost("/api/system/setTailscale", {
+            enabled: enabledElement.checked,
+            hostname: hostnameElement.value.trim(),
+            authKey: authKeyElement.value.trim(),
+            listen: listenElement.value.trim(),
+        }, (response) => {
+            const data = response.data as ITailscaleData;
+            applyData(data);
+            // 内核在后台重建节点，保存瞬间可能仍返回旧状态，先按目标状态提示
+            if (!data.config.enabled) {
+                renderStatus({state: "disabled", authURL: "", ips: null, error: ""});
+            } else if ("disabled" === data.status.state) {
+                renderStatus({state: "starting", authURL: "", ips: null, error: ""});
+            }
+        }).finally(() => {
+            confirmElement.disabled = false;
+        });
+    });
+
+    refresh(true);
+    const poll = () => {
+        if (!root.isConnected) {
+            return;
+        }
+        refresh(false);
+        window.setTimeout(poll, 3000);
+    };
+    window.setTimeout(poll, 3000);
 };
 
 const registerAppDataGroup = (tab: SettingTabBuilder) => {

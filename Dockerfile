@@ -23,6 +23,8 @@ COPY kernel/av/lunar_calendar_data.json /kernel/av/lunar_calendar_data.json
 ADD scripts/prepare-ocr.py scripts/ocr-assets.json /scripts/
 RUN <<EORUN
 #!/bin/bash -e
+# 替换 Debian 源为阿里云镜像
+sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
 apt-get update
 apt-get install -y --no-install-recommends python3
 python3 /scripts/prepare-ocr.py
@@ -33,28 +35,51 @@ mv appearance stage guide /artifacts/
 if [ -d changelogs ]; then mv changelogs /artifacts/; fi
 EORUN
 
-FROM ${GO_IMAGE} AS go-source
+# go-build 阶段使用 BUILDPLATFORM 原生编译，再交叉编译到 TARGETARCH，完全避开 QEMU 模拟，
+# 解决 Go 1.26 编译器在 QEMU 下段错误的问题
+FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS go-source
+
+# 目标架构（由 buildx 自动设置：amd64、arm64 等）
+ARG TARGETARCH=amd64
+ARG BUILDPLATFORM
 
 RUN <<EORUN
 #!/bin/sh -e
-apk add --no-cache gcc musl-dev
+# 替换 Alpine 源为阿里云镜像
+sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories
+apk add --no-cache ca-certificates wget xz
+# 安装 musl 交叉编译工具链：musl 生成可在 Alpine 运行的目标架构二进制
+MUSL_ARCH=""
+case "$TARGETARCH" in
+  amd64) MUSL_ARCH="x86_64-linux-musl" ;;
+  arm64) MUSL_ARCH="aarch64-linux-musl" ;;
+esac
+wget -qO /tmp/musl.tar.xz "https://musl.cc/${MUSL_ARCH}-cross.tgz"
+tar -xzf /tmp/musl.tar.xz -C /opt
+ln -s /opt/${MUSL_ARCH}-cross/bin/${MUSL_ARCH}-gcc /usr/local/bin/${MUSL_ARCH}-gcc
 go env -w GO111MODULE=on
 go env -w CGO_ENABLED=1
+go env -w GOOS=linux
+go env -w GOARCH=$TARGETARCH
+go env -w CC=${MUSL_ARCH}-gcc
 EORUN
 
 WORKDIR /kernel
 ADD kernel/go.* .
-RUN go mod download
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg \
+    GOPROXY=https://mirrors.aliyun.com/goproxy/,https://goproxy.cn,direct \
+    GOSUMDB=sum.golang.google.cn GOGC=off GOFLAGS=-mod=mod go mod download
 
 ADD kernel/ .
 FROM go-source AS go-build
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    go build -tags "fts5 sqlcipher" -ldflags "-s -w"
+    GOGC=off GOFLAGS=-mod=mod go build -p 1 -tags "fts5 sqlcipher" -ldflags "-s -w"
 
 FROM --platform=$BUILDPLATFORM ${ALPINE_IMAGE} AS onnx-source
 ARG ONNX_COMMIT=3a728b75062256951b6e19ce718907cf1a1d4cf0
 ARG ONNX_VERSION
-RUN apk add --no-cache git
+RUN sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories \
+    && apk add --no-cache git
 # 固定提交的源码在构建机上下载一次，网络中断时重试；子模块保持各自锁定的提交。
 RUN <<EORUN
 #!/bin/sh -e
@@ -89,6 +114,7 @@ ARG TARGETPLATFORM
 ARG ONNX_TOOLCHAIN_REV=2
 # ONNX 阶段只依赖 C++ 工具链和固定源码；更新工具链时递增修订号以刷新安装层。
 RUN echo "${TARGETPLATFORM} toolchain revision ${ONNX_TOOLCHAIN_REV}" \
+    && sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories \
     && apk add --no-cache bash cmake make g++ git patch python3 py3-pip py3-packaging linux-headers \
     && apk info -v | sort > /onnx-toolchain.txt
 
@@ -99,6 +125,7 @@ FROM --platform=$BUILDPLATFORM ${ALPINE_IMAGE} AS onnx-toolchain-arm
 ARG TARGETPLATFORM
 ARG ONNX_TOOLCHAIN_REV=2
 RUN echo "${TARGETPLATFORM} toolchain revision ${ONNX_TOOLCHAIN_REV}" \
+    && sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories \
     && apk add --no-cache bash cmake make g++ clang lld git patch python3 py3-pip py3-packaging linux-headers \
     && apk info -v | sort > /onnx-toolchain.txt
 
@@ -149,13 +176,17 @@ COPY --from=onnx-runtime /onnx-artifacts/ /ocr/linux-${TARGETARCH}/
 
 FROM ${ALPINE_IMAGE}
 LABEL maintainer="Liang Ding<845765@qq.com>"
+LABEL modifier="ulquiola@163.com>"
 
-RUN apk add --no-cache 'ca-certificates>=20261020-r0' tzdata su-exec libstdc++
+RUN sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories \
+    && apk add --no-cache 'ca-certificates>=20261020-r0' tzdata libstdc++
 
 ENV TZ=Asia/Shanghai
-ENV HOME=/home/siyuan
 ENV RUN_IN_CONTAINER=true
+ENV LANG=zh_CN.UTF-8
+ENV LC_ALL=zh_CN.UTF-8
 EXPOSE 6806
+VOLUME /siyuan/workspace
 
 WORKDIR /opt/siyuan/
 COPY --from=go-build --chmod=755 /kernel/kernel /kernel/entrypoint.sh .

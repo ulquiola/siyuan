@@ -24,6 +24,27 @@ type NetworkData struct {
 	Proxy *NetworkProxy `json:"proxy"`
 }
 
+// TailscaleConfig 是内嵌 Tailscale 节点的可编辑配置，状态目录由内核维护，不在界面暴露。
+type TailscaleConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Hostname string `json:"hostname"`
+	AuthKey  string `json:"authKey"`
+	Listen   string `json:"listen"`
+}
+
+// TailscaleStatus 是内嵌节点当前的运行状态，state 取值 disabled、starting、needsLogin、running 或 error。
+type TailscaleStatus struct {
+	State   string   `json:"state"`
+	AuthURL string   `json:"authURL"`
+	IPs     []string `json:"ips"`
+	Error   string   `json:"error"`
+}
+
+type TailscaleData struct {
+	Config TailscaleConfig `json:"config"`
+	Status TailscaleStatus `json:"status"`
+}
+
 type LockScreenRequest struct {
 	LockScreenMode float64 `json:"lockScreenMode"`
 }

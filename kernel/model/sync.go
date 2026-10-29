@@ -452,7 +452,8 @@ func checkSync(boot, exit, byHand bool) bool {
 		}
 		return false
 	}
-	if nil == Conf.GetUser() {
+	if nil == Conf.GetUser() && conf.ProviderSiYuan == confSyncReadSnapshot.Provider {
+		// 仅官方云端同步依赖社区账号，第三方同步无需登录
 		return false
 	}
 

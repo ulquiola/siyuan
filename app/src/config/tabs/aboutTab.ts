@@ -90,7 +90,7 @@ const genAboutVersionHtml = (): string => {
 
 const genAboutVersionName = () => `<div class="config-name">${window.siyuan.languages.currentVer} v${Constants.SIYUAN_VERSION}</div>`;
 
-const genAllChangelogsLink = () => `<a href="https://github.com/siyuan-note/siyuan/releases" target="_blank">${window.siyuan.languages.allChangelogs}</a>`;
+const genAllChangelogsLink = () => `<a href="https://github.com/ulquiola/siyuan/releases" target="_blank">${window.siyuan.languages.allChangelogs}</a>`;
 
 const genAboutVersionActions = (showCheckUpdate: boolean) => `<div class="fn__flex-center fn__flex-column fn__size200">
     ${showCheckUpdate ? `<button id="checkUpdateBtn" class="b3-button b3-button--outline fn__block">
