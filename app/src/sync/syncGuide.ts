@@ -197,6 +197,8 @@ export const syncGuide = (app?: App) => {
         return;
     }
     if (app && document.querySelector("#barSync")?.classList.contains("toolbar__item--active")) {
+        // 同步进行中时给出提示，避免点击后没有任何反馈
+        showMessage(window.siyuan.languages._kernel[81], 3000);
         return;
     }
     if (window.siyuan.config.sync.provider === 0 && needSubscribe()) {
