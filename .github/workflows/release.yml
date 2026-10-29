@@ -47,6 +47,8 @@ jobs:
 
   build-macos-arm64:
     name: Build macOS Apple Silicon package
+    # macOS 运行器并发有限，两个 macOS 任务串行执行，避免后一个在排队中被取消
+    needs: build-macos
     uses: ./.github/workflows/desktop-build.yml
     with:
       config: '{"os":"macos-latest","name":"macos build mac-arm64.dmg","kernel_path":"../app/kernel-darwin-arm64/SiYuan-Kernel","build_args_prefix":"-s -w -X","build_args_suffix":"Mode=prod","electron_args":"dist-darwin-arm64-unsigned","goos":"darwin","goarch":"arm64","suffix":"mac-arm64.dmg","e2e_shards":""}'
