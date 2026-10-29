@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build Windows package
+    uses: ./.github/workflows/desktop-build.yml
+    with:
+      config: '{"os":"windows-latest","name":"windows build win.exe","kernel_path":"../app/kernel/SiYuan-Kernel.exe","build_args_prefix":"-s -w -X","build_args_suffix":"Mode=prod","electron_args":"dist","goos":"windows","gobin":"bin","goarch":"amd64","suffix":"win.exe","e2e_shards":""}'
+      packageManager: pnpm@12.6.0
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download package
+        uses: actions/download-artifact@v8
+        with:
+          name: siyuan-win.exe
+          path: assets
+
+      - name: Prepare checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd assets
+          ls -l
+          test "$(find . -maxdepth 1 -name 'siyuan-*-win.exe' | wc -l)" = "1"
+          sha256sum siyuan-*-win.exe > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create draft release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: SiYuan ${{ github.ref_name }} 自用版
+          body: |
+            基于上游 ${{ github.ref_name }} 的自用构建。
+
+            - 移除设置中的账户与订阅入口
+            - 第三方同步的付费校验直接放行
+            - 桌面版内核内置 Tailscale（tsnet），可在 设置 - 应用 - Tailscale 中启用并查看状态，无需管理员权限即可通过本机 SOCKS5 代理访问 Tailnet
+            - Docker 构建适配国内网络与 amd64 原生编译
+
+            资产为 `siyuan-<版本>-win.exe`（Windows x64）与 `SHA256SUMS.txt`。
+          artifacts: "assets/*"
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          allowUpdates: true
+          omitDraftDuringUpdate: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          test "$(gh release view "$tag" --json isDraft --jq '.isDraft')" = "true"
+          test "$(gh release view "$tag" --json assets --jq '.assets | length')" = "2"
+          gh release edit "$tag" --draft=false
