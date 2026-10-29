@@ -7,7 +7,7 @@
 - 桌面版内核内置 Tailscale（tsnet），可在 设置 - 应用 - Tailscale 中启用并查看状态，无需管理员权限即可通过本机 SOCKS5 代理访问 Tailnet；
 - Docker 构建适配国内网络与 amd64 原生编译。
 
-版本号跟随上游，当前为 `3.8.8`；推送 `v*` 标签会触发 `Release` 工作流，构建 Windows 安装包并创建 GitHub Release。
+版本号跟随上游，当前为 `3.8.8`；推送 `v*` 标签会触发 `Release` 工作流，构建 Windows 与 macOS 安装包并创建 GitHub Release。
 
 目录说明：
 
@@ -115,7 +115,14 @@ git push github v3.8.8
 git push origin v3.8.8
 ```
 
-推送标签后，`Release` 工作流会在 Windows 运行器上构建内核与前端、打包 NSIS 安装包，并创建 GitHub Release。资产为 `siyuan-<版本>-win.exe` 与 `SHA256SUMS.txt`，安装包内已包含内置 Tailscale 的内核。
+推送标签后，`Release` 工作流会并行构建 Windows x64、macOS Intel 和 macOS Apple Silicon 三个安装包，并创建 GitHub Release。资产为：
+
+- `siyuan-<版本>-win.exe`：Windows x64 安装包
+- `siyuan-<版本>-mac.dmg`：macOS Intel 安装包
+- `siyuan-<版本>-mac-arm64.dmg`：macOS Apple Silicon 安装包
+- `SHA256SUMS.txt`：SHA-256 校验值
+
+安装包内已包含内置 Tailscale 的内核。macOS 安装包没有签名和公证，首次打开需要在 系统设置 - 隐私与安全性 中允许，或执行 `xattr -cr /Applications/SiYuan.app`。
 
 Docker 镜像不通过该工作流发布，使用 `scripts/docker-build.sh` 推送到阿里云仓库，标签为 `v<版本>` 与 `latest`。
 
