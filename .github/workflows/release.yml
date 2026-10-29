@@ -31,25 +31,40 @@ jobs:
           echo "value=${tag}" >> "$GITHUB_OUTPUT"
           echo "release tag: ${tag}"
 
-  build:
+  build-windows:
     name: Build Windows package
     uses: ./.github/workflows/desktop-build.yml
     with:
       config: '{"os":"windows-latest","name":"windows build win.exe","kernel_path":"../app/kernel/SiYuan-Kernel.exe","build_args_prefix":"-s -w -X","build_args_suffix":"Mode=prod","electron_args":"dist","goos":"windows","gobin":"bin","goarch":"amd64","suffix":"win.exe","e2e_shards":""}'
       packageManager: pnpm@12.6.0
 
+  build-macos:
+    name: Build macOS Intel package
+    uses: ./.github/workflows/desktop-build.yml
+    with:
+      config: '{"os":"macos-latest","name":"macos build mac.dmg","kernel_path":"../app/kernel-darwin/SiYuan-Kernel","build_args_prefix":"-s -w -X","build_args_suffix":"Mode=prod","electron_args":"dist-darwin-unsigned","goos":"darwin","goarch":"amd64","suffix":"mac.dmg","e2e_shards":""}'
+      packageManager: pnpm@12.6.0
+
+  build-macos-arm64:
+    name: Build macOS Apple Silicon package
+    uses: ./.github/workflows/desktop-build.yml
+    with:
+      config: '{"os":"macos-latest","name":"macos build mac-arm64.dmg","kernel_path":"../app/kernel-darwin-arm64/SiYuan-Kernel","build_args_prefix":"-s -w -X","build_args_suffix":"Mode=prod","electron_args":"dist-darwin-arm64-unsigned","goos":"darwin","goarch":"arm64","suffix":"mac-arm64.dmg","e2e_shards":""}'
+      packageManager: pnpm@12.6.0
+
   publish:
     name: Publish release
-    needs: [prepare, build]
+    needs: [prepare, build-windows, build-macos, build-macos-arm64]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - name: Download package
+      - name: Download packages
         uses: actions/download-artifact@v8
         with:
-          name: siyuan-win.exe
+          pattern: siyuan-*
           path: assets
+          merge-multiple: true
 
       - name: Prepare checksums
         shell: bash
@@ -57,32 +72,38 @@ jobs:
           set -euo pipefail
           cd assets
           ls -l
-          test "$(find . -maxdepth 1 -name 'siyuan-*-win.exe' | wc -l)" = "1"
-          sha256sum siyuan-*-win.exe > SHA256SUMS.txt
+          test -s "$(find . -maxdepth 1 -name 'siyuan-*-win.exe' | head -1)"
+          test -s "$(find . -maxdepth 1 -name 'siyuan-*-mac.dmg' | head -1)"
+          test -s "$(find . -maxdepth 1 -name 'siyuan-*-mac-arm64.dmg' | head -1)"
+          sha256sum siyuan-*-win.exe siyuan-*-mac.dmg siyuan-*-mac-arm64.dmg > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - name: Create draft release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ needs.prepare.outputs.tag }}
-          name: SiYuan ${{ needs.prepare.outputs.tag }} 自用版
-          body: |
-            基于上游 ${{ needs.prepare.outputs.tag }} 的自用构建。
+      - name: Write release notes
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+          cat > RELEASE_NOTES.md <<EOF
+          基于上游 ${RELEASE_TAG} 的自用构建。
 
-            - 移除设置中的账户与订阅入口
-            - 第三方同步的付费校验直接放行
-            - 桌面版内核内置 Tailscale（tsnet），可在 设置 - 应用 - Tailscale 中启用并查看状态，无需管理员权限即可通过本机 SOCKS5 代理访问 Tailnet
-            - Docker 构建适配国内网络与 amd64 原生编译
+          - 移除设置中的账户与订阅入口
+          - 第三方同步的付费校验直接放行
+          - 桌面版内核内置 Tailscale（tsnet），可在 设置 - 应用 - Tailscale 中启用并查看状态，无需管理员权限即可通过本机 SOCKS5 代理访问 Tailnet
+          - Docker 构建适配国内网络与 amd64 原生编译
 
-            资产为 `siyuan-<版本>-win.exe`（Windows x64）与 `SHA256SUMS.txt`。
-          artifacts: "assets/*"
-          draft: true
-          prerelease: ${{ contains(needs.prepare.outputs.tag, '-') }}
-          allowUpdates: true
-          omitDraftDuringUpdate: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          资产：
 
-      - name: Publish release
+          - \`siyuan-<版本>-win.exe\`：Windows x64 安装包
+          - \`siyuan-<版本>-mac.dmg\`：macOS Intel 安装包
+          - \`siyuan-<版本>-mac-arm64.dmg\`：macOS Apple Silicon 安装包
+          - \`SHA256SUMS.txt\`：SHA-256 校验值
+
+          macOS 安装包未签名，首次打开需要在 系统设置 - 隐私与安全性 中允许，或执行 \`xattr -cr /Applications/SiYuan.app\`。
+          EOF
+          cat RELEASE_NOTES.md
+
+      - name: Create or update release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -90,6 +111,40 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft')" = "true"
-          test "$(gh release view "$RELEASE_TAG" --json assets --jq '.assets | length')" = "2"
-          gh release edit "$RELEASE_TAG" --draft=false
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" assets/* --clobber
+            gh release edit "$RELEASE_TAG" --notes-file RELEASE_NOTES.md
+          elif [[ "$RELEASE_TAG" == *-* ]]; then
+            gh release create "$RELEASE_TAG" assets/* --title "SiYuan ${RELEASE_TAG} 自用版" --notes-file RELEASE_NOTES.md --prerelease
+          else
+            gh release create "$RELEASE_TAG" assets/* --title "SiYuan ${RELEASE_TAG} 自用版" --notes-file RELEASE_NOTES.md --latest
+          fi
+
+      - name: Verify assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$RELEASE_TAG" --json assets --jq '.assets | length')" = "4"
+          for attempt in {1..12}; do
+            READY=true
+            for file in assets/siyuan-*; do
+              name="$(basename "$file")"
+              local_digest="sha256:$(sha256sum "$file" | awk '{print $1}')"
+              remote_digest="$(gh api "repos/${GH_REPO}/releases/tags/${RELEASE_TAG}" --jq ".assets[] | select(.name == \"${name}\") | .digest")"
+              if [ "$local_digest" != "$remote_digest" ]; then
+                READY=false
+                break
+              fi
+            done
+            if [ "$READY" = true ]; then
+              echo "release assets verified"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "release assets were not verified in time"
+          exit 1
