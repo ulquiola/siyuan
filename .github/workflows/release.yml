@@ -90,6 +90,7 @@ jobs:
           - 移除设置中的账户与订阅入口
           - 第三方同步的付费校验直接放行
           - 桌面版内核内置 Tailscale（tsnet），可在 设置 - 应用 - Tailscale 中启用并查看状态，无需管理员权限即可通过本机 SOCKS5 代理访问 Tailnet
+          - 应用内的检查更新、自动下载安装包和下载链接都指向本仓库的 GitHub Releases
           - Docker 构建适配国内网络与 amd64 原生编译
 
           资产：
