@@ -1,0 +1,71 @@
+name: Windows kernel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build SiYuan-Kernel.exe
+    runs-on: windows-latest
+    env:
+      GOPATH: ${{ github.workspace }}/go
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
+
+      - name: Set up MSYS2 UCRT64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: p7zip mingw-w64-ucrt-x86_64-lua
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/kernel/go.mod
+          cache-dependency-path: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/kernel/go.sum
+          cache: true
+      - run: go version
+
+      - name: Set up goversioninfo
+        run: go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo && go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo
+        working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/kernel
+        env:
+          GO111MODULE: on
+          CGO_ENABLED: 1
+          GOOS: windows
+          GOARCH: amd64
+
+      - name: Test embedded Tailscale
+        run: go test ./tailscale/...
+        working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/kernel
+        env:
+          GO111MODULE: on
+          CGO_ENABLED: 1
+          GOOS: windows
+          GOARCH: amd64
+
+      - name: Generate icon resource and version info
+        run: ${{ github.workspace }}\go\bin\goversioninfo -platform-specific=true -icon="resource\icon.ico" -manifest="resource\goversioninfo.exe.manifest"
+        working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/kernel
+
+      - name: Build kernel
+        run: go build -tags "fts5 sqlcipher" -o "..\app\kernel\SiYuan-Kernel.exe" -ldflags "-s -w -X github.com/${{ github.repository }}/kernel/util.Mode=prod"
+        working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/kernel
+        env:
+          GO111MODULE: on
+          CGO_ENABLED: 1
+          GOOS: windows
+          GOARCH: amd64
+
+      - name: Verify kernel
+        run: .\SiYuan-Kernel.exe --version
+        working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/app/kernel
+
+      - name: Upload kernel
+        uses: actions/upload-artifact@v7
+        with:
+          name: SiYuan-Kernel-windows-amd64
+          path: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/app/kernel/SiYuan-Kernel.exe
+          if-no-files-found: error

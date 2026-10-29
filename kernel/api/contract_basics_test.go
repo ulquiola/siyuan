@@ -74,6 +74,8 @@ func TestAPIContractBasicRequests(t *testing.T) {
 		{"/api/system/setNetworkServe", `{"networkServe":null}`, setNetworkServe, -1},
 		{"/api/system/setNetworkServeTLS", `{"networkServeTLS":1}`, setNetworkServeTLS, -1},
 		{"/api/system/setNetworkProxy", `{"scheme":"http","host":"host"}`, setNetworkProxy, -1},
+		{"/api/system/getTailscale", "", getTailscale, 0},
+		{"/api/system/setTailscale", `{"listen":"0.0.0.0:1055"}`, setTailscale, -1},
 		{"/api/system/setDownloadInstallPkg", `{"downloadInstallPkg":"true"}`, setDownloadInstallPkg, -1},
 		{"/api/system/setSettingsWindow", `{"settingsWindow":"true"}`, setSettingsWindow, -1},
 		{"/api/system/setUpdateChannel", `{"updateChannel":null}`, setUpdateChannel, -1},

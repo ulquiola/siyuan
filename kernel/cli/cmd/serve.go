@@ -24,6 +24,7 @@ import (
 	"github.com/siyuan-note/siyuan/kernel/plugin"
 	"github.com/siyuan-note/siyuan/kernel/server"
 	"github.com/siyuan-note/siyuan/kernel/sql"
+	"github.com/siyuan-note/siyuan/kernel/tailscale"
 	"github.com/siyuan-note/siyuan/kernel/util"
 
 	"github.com/spf13/cobra"
@@ -68,6 +69,8 @@ var serveCmd = &cobra.Command{
 
 		model.InitJwtKey()
 		model.InitConf()
+		// 内嵌 Tailscale 只在配置目录存在 tailscale.json 时生效，异步启动，失败不影响内核
+		go tailscale.Apply(tailscale.ConfigDir())
 		go server.Serve(false, model.Conf.CookieKey)
 		model.InitAppearance()
 		sql.InitDatabase(false)

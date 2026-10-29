@@ -53782,6 +53782,104 @@
       ],
       "additionalProperties": false
     },
+    "TailscaleConfig": {
+      "type": "object",
+      "properties": {
+        "authKey": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "hostname": {
+          "type": "string"
+        },
+        "listen": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authKey",
+        "enabled",
+        "hostname",
+        "listen"
+      ],
+      "additionalProperties": false
+    },
+    "TailscaleConfigInput": {
+      "type": "object",
+      "properties": {
+        "authKey": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "hostname": {
+          "type": "string"
+        },
+        "listen": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authKey",
+        "enabled",
+        "hostname",
+        "listen"
+      ],
+      "additionalProperties": false
+    },
+    "TailscaleData": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/TailscaleConfig"
+        },
+        "status": {
+          "$ref": "#/$defs/TailscaleStatus"
+        }
+      },
+      "required": [
+        "config",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "TailscaleStatus": {
+      "type": "object",
+      "properties": {
+        "authURL": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "ips": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authURL",
+        "error",
+        "ips",
+        "state"
+      ],
+      "additionalProperties": false
+    },
     "TaskListMarkerRequestInput": {
       "type": "object",
       "properties": {
@@ -171601,6 +171699,85 @@
     },
     {
       "method": "POST",
+      "path": "/api/system/getTailscale",
+      "handler": "getTailscale",
+      "authorization": [
+        "authenticated",
+        "admin"
+      ],
+      "body": "none",
+      "request": {
+        "$ref": "#/$defs/EmptyRequestInput"
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "data": {
+                "$ref": "#/$defs/TailscaleData"
+              },
+              "msg": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "msg",
+              "data"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "integer",
+                "enum": [
+                  -1
+                ]
+              },
+              "data": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "closeTimeout": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "closeTimeout"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "msg": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "msg",
+              "data"
+            ],
+            "additionalProperties": true
+          }
+        ]
+      }
+    },
+    {
+      "method": "POST",
       "path": "/api/system/getWorkspaceInfo",
       "handler": "getWorkspaceInfo",
       "authorization": [
@@ -174046,6 +174223,86 @@
               },
               "data": {
                 "type": "null"
+              },
+              "msg": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "msg",
+              "data"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "integer",
+                "enum": [
+                  -1
+                ]
+              },
+              "data": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "closeTimeout": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "closeTimeout"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "msg": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "msg",
+              "data"
+            ],
+            "additionalProperties": true
+          }
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/system/setTailscale",
+      "handler": "setTailscale",
+      "authorization": [
+        "authenticated",
+        "admin",
+        "writable"
+      ],
+      "body": "json",
+      "request": {
+        "$ref": "#/$defs/TailscaleConfigInput"
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "data": {
+                "$ref": "#/$defs/TailscaleData"
               },
               "msg": {
                 "type": "string"
