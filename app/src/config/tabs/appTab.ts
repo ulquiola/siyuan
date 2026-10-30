@@ -29,6 +29,7 @@ import {genConfigItemMainHtml, genConfigItemName} from "../render/fragments";
 import {sendAppSetting} from "./appRuntime";
 import {getHostCapabilities} from "../../util/hostCapabilities";
 import {genWorkspaceStorageHtml, mountWorkspaceStorage} from "./workspaceStorage";
+import {applyTailscaleStatus, ITailscaleLanguages, ITailscaleStatus} from "./tailscaleStatus";
 import {importDataFile} from "../../menus/importData";
 
 /// #if MOBILE
@@ -419,13 +420,6 @@ const mountNetworkProxy = (root: HTMLElement) => {
     });
 };
 
-interface ITailscaleStatus {
-    state: string;
-    authURL: string;
-    ips: string[] | null;
-    error: string;
-}
-
 interface ITailscaleData {
     config: {enabled: boolean; hostname: string; authKey: string; listen: string};
     status: ITailscaleStatus;
@@ -464,37 +458,7 @@ const mountTailscale = (root: HTMLElement) => {
     }
 
     const renderStatus = (status: ITailscaleStatus) => {
-        statusElement.textContent = "";
-        switch (status.state) {
-            case "running": {
-                const ips = status.ips && status.ips.length ? ` · ${status.ips.join(", ")}` : "";
-                statusElement.textContent = `${window.siyuan.languages.tailscaleRunning}${ips}`;
-                break;
-            }
-            case "needsLogin": {
-                statusElement.textContent = window.siyuan.languages.tailscaleNeedsLogin;
-                if (status.authURL) {
-                    const link = document.createElement("a");
-                    link.className = "fn__a";
-                    link.href = status.authURL;
-                    link.target = "_blank";
-                    link.rel = "noreferrer";
-                    link.textContent = window.siyuan.languages.tailscaleOpenLogin;
-                    statusElement.appendChild(document.createTextNode(" "));
-                    statusElement.appendChild(link);
-                }
-                break;
-            }
-            case "starting":
-                statusElement.textContent = window.siyuan.languages.tailscaleStarting;
-                break;
-            case "error":
-                statusElement.textContent = status.error ?
-                    `${window.siyuan.languages.tailscaleError}: ${status.error}` : window.siyuan.languages.tailscaleError;
-                break;
-            default:
-                statusElement.textContent = window.siyuan.languages.tailscaleDisabled;
-        }
+        applyTailscaleStatus(statusElement, status, window.siyuan.languages as ITailscaleLanguages);
     };
 
     const applyData = (data: ITailscaleData) => {
