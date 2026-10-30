@@ -65,14 +65,25 @@ func TestStatusFromState(t *testing.T) {
 		t.Fatalf("unexpected login status: %#v", needsLogin)
 	}
 
-	stopped := statusFromState(&ipnstate.Status{BackendState: "Stopped", Health: []string{"backend error"}})
-	if "error" != stopped.State || "Stopped: backend error" != stopped.Error {
-		t.Fatalf("unexpected stopped status: %#v", stopped)
+	invalid := statusFromState(&ipnstate.Status{BackendState: "Invalid", Health: []string{"backend error"}})
+	if "error" != invalid.State || "Invalid: backend error" != invalid.Error {
+		t.Fatalf("unexpected invalid status: %#v", invalid)
 	}
 
 	starting := statusFromState(&ipnstate.Status{BackendState: "Starting"})
 	if "starting" != starting.State {
 		t.Fatalf("unexpected starting status: %#v", starting)
+	}
+}
+
+func TestStatusFromStateTreatsStoppedAsStarting(t *testing.T) {
+	for _, state := range []string{"NoState", "Starting", "Stopped"} {
+		if got := statusFromState(&ipnstate.Status{BackendState: state}); "starting" != got.State {
+			t.Fatalf("backend state [%s] should be starting, got [%s]", state, got.State)
+		}
+	}
+	if got := statusFromState(&ipnstate.Status{BackendState: "Stopped", AuthURL: "https://login.tailscale.com/a/1"}); "https://login.tailscale.com/a/1" != got.AuthURL {
+		t.Fatalf("auth url should survive, got [%s]", got.AuthURL)
 	}
 }
 

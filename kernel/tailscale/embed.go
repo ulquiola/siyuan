@@ -179,7 +179,8 @@ func statusFromState(status *ipnstate.Status) NodeStatus {
 		ret.State = "running"
 	case "NeedsLogin", "NeedsMachineAuth":
 		ret.State = "needsLogin"
-	case "Starting", "NoState":
+	// 未启动的节点仍可能带着登录链接，按未就绪展示，避免把用户的登录提示当成错误
+	case "Starting", "NoState", "Stopped":
 		ret.State = "starting"
 	default:
 		ret.State = "error"
