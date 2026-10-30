@@ -58,9 +58,16 @@ export const describeTailscaleStatus = (status: ITailscaleStatus,
 };
 
 // 先覆盖文案再按需追加链接，重复调用不会累积旧节点。
+//
+// 文案与链接都未变化时直接返回，避免轮询反复重建链接节点导致点击落空、焦点丢失。
 export const applyTailscaleStatus = (element: HTMLElement, status: ITailscaleStatus,
                                     languages: ITailscaleLanguages): void => {
     const view = describeTailscaleStatus(status, languages);
+    const existingLink = element.querySelector("a");
+    const currentHref = existingLink ? existingLink.getAttribute("href") : "";
+    if (view.text === element.firstChild?.nodeValue && view.loginURL === currentHref) {
+        return;
+    }
     element.textContent = view.text;
     if (!view.loginURL) {
         return;

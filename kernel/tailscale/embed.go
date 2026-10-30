@@ -102,7 +102,8 @@ func Apply(configDir string) {
 	current = nil
 	lastErr = ""
 	nodeMu.Unlock()
-	// 节点重建后旧的登录链接已失效，缓存随之清空，避免禁用或启动失败时沿用上一节点的链接
+	// 清空发生在重建开始时、旧节点停止之前，此后缓存的链接只会来自新节点，
+	// 禁用或启动失败时也不会沿用上一节点残留的链接
 	rememberAuthURL("")
 	if nil != previous {
 		previous.stop()
