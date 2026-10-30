@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Видалити збережений ключ",
+	"tailscaleAuthKeySaved": "Збережено, залиште порожнім, щоб зберегти поточний ключ",
+	"tailscaleConfigError": "Помилка конфігурації Tailscale",
+	"tailscaleStartError": "Не вдалося запустити Tailscale",
 	"tailscaleWaitingAuth": "Очікування посилання для входу, перевірте мережу або проксі",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Запускає вбудований вузол Tailscale в ядрі та надає доступ до пристроїв вашого tailnet через локальний проксі SOCKS5",

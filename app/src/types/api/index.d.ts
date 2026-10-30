@@ -2534,9 +2534,9 @@ export type TagSnapshotRequestInput = { "id": string; "name": string; };
 
 export type TailChildBlocksRequestInput = { "id": string; "ids"?: Array<string> | null; "n"?: number | null; "notebook"?: string | null; };
 
-export type TailscaleConfig = { "authKey": string; "enabled": boolean; "hostname": string; "listen": string; };
+export type TailscaleConfig = { "authKeySaved": boolean; "enabled": boolean; "hostname": string; "listen": string; };
 
-export type TailscaleConfigInput = { "authKey": string; "enabled": boolean; "hostname": string; "listen": string; };
+export type TailscaleConfigRequestInput = { "authKey": string; "clearAuthKey": boolean; "enabled": boolean; "hostname": string; "listen": string; };
 
 export type TailscaleData = { "config": TailscaleConfig; "status": TailscaleStatus; };
 
@@ -8320,7 +8320,7 @@ export interface APIPOSTRoutes {
     };
     /**
      * 读取内嵌 Tailscale 节点的配置和运行状态。配置文件不存在时返回默认配置和 disabled 状态。
-     * authKey 仅在已保存时返回，界面可原样回填；状态中的 authURL 在需要登录时给出认证地址。
+     * 不会返回已保存的 authKey，只用 authKeySaved 表示是否已经保存；状态中的 authURL 在需要登录时给出认证地址。
      */
     "/api/system/getTailscale": {
         request: EmptyRequestInput;
@@ -8591,10 +8591,11 @@ export interface APIPOSTRoutes {
     };
     /**
      * 保存内嵌 Tailscale 配置并异步重建节点，监听地址仅允许回环地址，校验失败返回 code=-1。
-     * 返回保存后的配置和当前状态；节点重建在后台完成，调用方应继续轮询 getTailscale。
+     * authKey 为空表示沿用已保存的密钥，clearAuthKey 为 true 时删除已保存的密钥；
+     * 返回保存后的配置和当前状态，节点重建在后台完成，调用方应继续轮询 getTailscale。
      */
     "/api/system/setTailscale": {
-        request: TailscaleConfigInput;
+        request: TailscaleConfigRequestInput;
         response: { "code": 0; "data": TailscaleData; "msg": string; } | { "code": -1; "data": { "closeTimeout": number; } | null; "msg": string; };
         body: "json";
         /** 服务器路由要求；资源权限与笔记本租约仍由内核校验 */

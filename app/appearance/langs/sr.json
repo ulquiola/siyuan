@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Обриши сачувани кључ",
+	"tailscaleAuthKeySaved": "Сачувано, оставите празно да задржите тренутни кључ",
+	"tailscaleConfigError": "Грешка у конфигурацији Tailscale",
+	"tailscaleStartError": "Tailscale није успео да се покрене",
 	"tailscaleWaitingAuth": "Чекање на везу за пријаву, проверите мрежу или прокси",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Покреће уграђени Tailscale чвор у језгру и омогућава приступ уређајима у вашем tailnet-у преко локалног SOCKS5 проксија",

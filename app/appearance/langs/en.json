@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Clear saved key",
+	"tailscaleAuthKeySaved": "Saved, leave blank to keep the current key",
+	"tailscaleConfigError": "Tailscale configuration error",
+	"tailscaleStartError": "Tailscale failed to start",
 	"tailscaleWaitingAuth": "Waiting for the login link, check your network or proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Run an embedded Tailscale node in the kernel and reach devices in your tailnet through the local SOCKS5 proxy",

@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Удалить сохранённый ключ",
+	"tailscaleAuthKeySaved": "Сохранён, оставьте пустым, чтобы сохранить текущий ключ",
+	"tailscaleConfigError": "Ошибка конфигурации Tailscale",
+	"tailscaleStartError": "Не удалось запустить Tailscale",
 	"tailscaleWaitingAuth": "Ожидание ссылки для входа, проверьте сеть или прокси",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Запускает встроенный узел Tailscale в ядре и открывает доступ к устройствам вашего tailnet через локальный прокси SOCKS5",

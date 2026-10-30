@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//go:build !mobile
+//go:build !android && !ios
 
 package tailscale
 
@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/siyuan-note/logging"
+	"github.com/siyuan-note/siyuan/kernel/util"
 	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/net/socks5"
 	"tailscale.com/net/tshttpproxy"
@@ -69,14 +70,19 @@ func (l *userLogf) shouldLog(message string) bool {
 }
 
 type runningNode struct {
-	server   *tsnet.Server
-	listener net.Listener
-	config   *Config
+	server      *tsnet.Server
+	listener    net.Listener
+	config      *Config
+	closeServer func() error
 }
 
 func (n *runningNode) stop() {
 	n.listener.Close()
-	if err := n.server.Close(); nil != err && !errors.Is(err, net.ErrClosed) {
+	closeServer := n.closeServer
+	if nil == closeServer {
+		closeServer = n.server.Close
+	}
+	if err := closeServer(); nil != err && !errors.Is(err, net.ErrClosed) {
 		logging.LogWarnf("tailscale: stop node [%s] failed: %s", n.config.Hostname, err)
 	}
 }
@@ -95,6 +101,9 @@ var (
 	// 控制面错误只出现在 tsnet 内部日志里，单独留下最后一条供设置界面展示
 	controlErrMu sync.Mutex
 	controlErr   string
+	// controlLogLast 折叠连续重复的控制面日志，避免轮询期间反复写日志
+	controlLogMu   sync.Mutex
+	controlLogLast string
 
 	controlProxyOnce sync.Once
 )
@@ -103,6 +112,7 @@ var (
 //
 // 本函数会等待旧节点关闭，因此由调用方放到后台执行；失败只记录状态和日志，不影响内核启动。
 func Apply(configDir string) {
+	defer logging.Recover()
 	ensureControlProxyDirect()
 
 	applyMu.Lock()
@@ -123,7 +133,7 @@ func Apply(configDir string) {
 
 	config, err := LoadConfig(configDir)
 	if nil != err {
-		setLastError(err)
+		setLastError("tailscaleConfigError", err)
 		return
 	}
 	if nil == config || !config.IsEnabled() {
@@ -132,7 +142,7 @@ func Apply(configDir string) {
 
 	listener, err := net.Listen("tcp", config.Listen)
 	if nil != err {
-		setLastError(fmt.Errorf("listen [%s] failed: %w", config.Listen, err))
+		setLastError("tailscaleStartError", fmt.Errorf("listen [%s] failed: %w", config.Listen, err))
 		return
 	}
 
@@ -145,16 +155,17 @@ func Apply(configDir string) {
 	}
 	if err = server.Start(); nil != err {
 		listener.Close()
-		setLastError(fmt.Errorf("start node [%s] failed: %w", config.Hostname, err))
+		setLastError("tailscaleStartError", fmt.Errorf("start node [%s] failed: %w", config.Hostname, err))
 		return
 	}
 
 	nodeMu.Lock()
-	current = &runningNode{server: server, listener: listener, config: config}
+	current = &runningNode{server: server, listener: listener, config: config, closeServer: server.Close}
 	nodeMu.Unlock()
 	logging.LogInfof("tailscale: serving SOCKS5 on [%s] for node [%s]", config.Listen, config.Hostname)
 
 	go func() {
+		defer logging.Recover()
 		if serveErr := serveSOCKS(listener, server.Dial); nil != serveErr && !errors.Is(serveErr, net.ErrClosed) {
 			logging.LogWarnf("tailscale: SOCKS5 service stopped: %s", serveErr)
 		}
@@ -188,6 +199,10 @@ func Status() NodeStatus {
 		return NodeStatus{State: "error", Error: err.Error(), AuthURL: cachedAuthURL()}
 	}
 	ret := statusFromState(status)
+	if "running" == ret.State && "" != lastControlError() {
+		// 连接成功后清掉旧的控制面错误，避免节点再次断开时展示过期原因
+		resetControlError()
+	}
 	// 只在查询成功时写入缓存，空串表示已完成登录，同样需要覆盖旧链接
 	rememberAuthURL(ret.AuthURL)
 	return withControlDetail(ret)
@@ -241,11 +256,29 @@ func statusFromState(status *ipnstate.Status) NodeStatus {
 	return ret
 }
 
-func setLastError(err error) {
+func setLastError(key string, err error) {
+	message := err.Error()
+	if prefix := localized(key); "" != prefix {
+		message = prefix + ": " + message
+	}
 	nodeMu.Lock()
-	lastErr = err.Error()
+	lastErr = message
 	nodeMu.Unlock()
-	logging.LogWarnf("tailscale: %s", err)
+	logging.LogWarnf("tailscale: %s", message)
+}
+
+// localized 返回当前界面语言下的提示文案，语言文件缺失时回退到英文。
+func localized(key string) string {
+	if text := util.I18nTerm(util.Lang, key); "" != text {
+		return text
+	}
+	switch key {
+	case "tailscaleConfigError":
+		return "Tailscale configuration error"
+	case "tailscaleStartError":
+		return "Tailscale failed to start"
+	}
+	return ""
 }
 
 // ensureControlProxyDirect 让 Tailscale 自身的网络请求始终直连。
@@ -260,25 +293,35 @@ func ensureControlProxyDirect() {
 	})
 }
 
-// controlLogf 从 tsnet 的内部日志里留下最后一条控制面错误。
+// controlLogf 把 tsnet 的控制面日志转写到内核日志，并留下最后一条错误供设置界面展示。
 //
-// 控制面失败只写进日志、不进状态查询结果，界面拿不到，用户只能翻 tailscaled.log。
+// 控制面失败只写进 tsnet 内部日志、不进状态查询结果，界面拿不到，用户只能翻 tailscaled.log。
 func controlLogf(format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
 	if !strings.Contains(message, "control:") {
 		return
 	}
-	if !strings.Contains(message, "failed") && !strings.Contains(message, "error") {
+	controlLogMu.Lock()
+	changed := message != controlLogLast
+	controlLogLast = message
+	controlLogMu.Unlock()
+	if !changed {
 		return
 	}
-	// 去掉前缀，只保留能直接展示给用户的部分
-	message = strings.TrimSpace(strings.TrimPrefix(message, "control: "))
-	if controlErrLimit < len(message) {
-		message = message[:controlErrLimit]
+
+	if !strings.Contains(message, "failed") && !strings.Contains(message, "error") {
+		logging.LogInfof("tailscale: %s", message)
+		return
+	}
+	// 去掉前缀，只保留能直接展示给用户的部分；按字符截断，避免切坏多字节文本
+	detail := strings.TrimSpace(strings.TrimPrefix(message, "control: "))
+	if runes := []rune(detail); controlErrLimit < len(runes) {
+		detail = string(runes[:controlErrLimit])
 	}
 	controlErrMu.Lock()
-	controlErr = message
+	controlErr = detail
 	controlErrMu.Unlock()
+	logging.LogWarnf("tailscale: %s", message)
 }
 
 // withControlDetail 在未连接状态下补上最近一次控制面错误，已连接时保持为空。
@@ -301,6 +344,10 @@ func resetControlError() {
 	controlErrMu.Lock()
 	controlErr = ""
 	controlErrMu.Unlock()
+
+	controlLogMu.Lock()
+	controlLogLast = ""
+	controlLogMu.Unlock()
 }
 
 func serveSOCKS(listener net.Listener, dial func(ctx context.Context, network, address string) (net.Conn, error)) error {
@@ -316,11 +363,23 @@ func serveSOCKS(listener net.Listener, dial func(ctx context.Context, network, a
 func logNodeAddress(server *tsnet.Server, hostname string) {
 	defer logging.Recover()
 	for range 120 {
+		if !isCurrentNode(server) {
+			return
+		}
 		if ip4, _ := server.TailscaleIPs(); ip4.IsValid() {
 			logging.LogInfof("tailscale: node [%s] online, tailnet IP [%s]", hostname, ip4)
 			return
 		}
 		time.Sleep(nodeOnlineLogInterval)
 	}
-	logging.LogWarnf("tailscale: node [%s] has no tailnet IP after %s, check login or network", hostname, 120*nodeOnlineLogInterval)
+	if isCurrentNode(server) {
+		logging.LogWarnf("tailscale: node [%s] has no tailnet IP after %s, check login or network", hostname, 120*nodeOnlineLogInterval)
+	}
+}
+
+// isCurrentNode 判断节点是否仍是当前节点，避免旧节点的后台任务继续轮询或告警。
+func isCurrentNode(server *tsnet.Server) bool {
+	nodeMu.Lock()
+	defer nodeMu.Unlock()
+	return nil != current && current.server == server
 }

@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "مسح المفتاح المحفوظ",
+	"tailscaleAuthKeySaved": "تم الحفظ، اتركه فارغًا للاحتفاظ بالمفتاح الحالي",
+	"tailscaleConfigError": "خطأ في تكوين Tailscale",
+	"tailscaleStartError": "فشل بدء Tailscale",
 	"tailscaleWaitingAuth": "في انتظار رابط تسجيل الدخول، تحقق من الشبكة أو الوكيل",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "تشغيل عقدة Tailscale مدمجة في النواة والوصول إلى الأجهزة في tailnet عبر وكيل SOCKS5 المحلي",

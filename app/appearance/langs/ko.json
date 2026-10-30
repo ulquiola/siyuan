@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "저장된 키 삭제",
+	"tailscaleAuthKeySaved": "저장됨, 비워 두면 현재 키를 유지합니다",
+	"tailscaleConfigError": "Tailscale 구성 오류",
+	"tailscaleStartError": "Tailscale 시작 실패",
 	"tailscaleWaitingAuth": "로그인 링크를 기다리는 중입니다. 네트워크나 프록시를 확인하세요",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "커널에서 Tailscale 노드를 실행하고 로컬 SOCKS5 프록시를 통해 Tailnet의 장치에 접속합니다",

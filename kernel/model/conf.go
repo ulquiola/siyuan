@@ -1199,17 +1199,9 @@ func IsSubscriber() bool {
 	return nil != u && (-1 == u.UserSiYuanProExpireTime || 0 < u.UserSiYuanProExpireTime) && 0 == u.UserSiYuanSubscriptionStatus
 }
 
+// IsPaidUser 在自用构建中始终返回 true，跳过订阅和一次性付费校验。
 func IsPaidUser() bool {
 	return true
-	if IsSubscriber() {
-		return true
-	}
-
-	u := Conf.GetUser()
-	if nil == u {
-		return false
-	}
-	return 1 == u.UserSiYuanOneTimePayStatus
 }
 
 const (

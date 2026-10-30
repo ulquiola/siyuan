@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "מחק מפתח שמור",
+	"tailscaleAuthKeySaved": "נשמר, השאר ריק כדי לשמור על המפתח הנוכחי",
+	"tailscaleConfigError": "שגיאת תצורת Tailscale",
+	"tailscaleStartError": "הפעלת Tailscale נכשלה",
 	"tailscaleWaitingAuth": "ממתין לקישור ההתחברות, בדקו את הרשת או את הפרוקסי",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "הפעלת צומת Tailscale מוטמע בליבה וגישה להתקנים ב-tailnet דרך פרוקסי SOCKS5 מקומי",

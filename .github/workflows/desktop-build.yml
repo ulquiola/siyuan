@@ -9,6 +9,9 @@ on:
       packageManager:
         required: true
         type: string
+      ref:
+        default: ""
+        type: string
       testing_ref:
         default: ""
         type: string
@@ -25,6 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.ref }}
           path: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
 
       - name: Set up MSYS2 UCRT64
@@ -83,7 +87,7 @@ jobs:
           echo "cc=$RUNNER_TEMP/${target_prefix}-cross/bin/${target_prefix}-gcc" >> "$GITHUB_OUTPUT"
 
       - name: Set up goversioninfo
-        run: go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo && go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo
+        run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0
         if: "contains( fromJSON(inputs.config).goos, 'windows')"
         working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/kernel
         env:

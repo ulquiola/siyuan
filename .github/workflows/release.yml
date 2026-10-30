@@ -11,6 +11,11 @@ on:
         required: true
         type: string
 
+# 同一标签的发布任务不并发执行，避免重复上传同一批资产
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   prepare:
     name: Resolve release tag
@@ -31,28 +36,49 @@ jobs:
           echo "value=${tag}" >> "$GITHUB_OUTPUT"
           echo "release tag: ${tag}"
 
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.tag.outputs.value }}
+
+      - name: Verify tag matches package version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./app/package.json').version")"
+          if [ "v${version}" != "${RELEASE_TAG}" ]; then
+            echo "tag ${RELEASE_TAG} does not match app/package.json version ${version}"
+            exit 1
+          fi
+
   build-windows:
     name: Build Windows package
+    needs: prepare
     uses: ./.github/workflows/desktop-build.yml
     with:
       config: '{"os":"windows-latest","name":"windows build win.exe","kernel_path":"../app/kernel/SiYuan-Kernel.exe","build_args_prefix":"-s -w -X","build_args_suffix":"Mode=prod","electron_args":"dist","goos":"windows","gobin":"bin","goarch":"amd64","suffix":"win.exe","e2e_shards":""}'
       packageManager: pnpm@12.6.0
+      ref: ${{ needs.prepare.outputs.tag }}
 
   build-macos:
     name: Build macOS Intel package
+    needs: prepare
     uses: ./.github/workflows/desktop-build.yml
     with:
-      config: '{"os":"macos-latest","name":"macos build mac.dmg","kernel_path":"../app/kernel-darwin/SiYuan-Kernel","build_args_prefix":"-s -w -X","build_args_suffix":"Mode=prod","electron_args":"dist-darwin-unsigned","goos":"darwin","goarch":"amd64","suffix":"mac.dmg","e2e_shards":""}'
+      config: '{"os":"macos-15-intel","name":"macos build mac.dmg","kernel_path":"../app/kernel-darwin/SiYuan-Kernel","build_args_prefix":"-s -w -X","build_args_suffix":"Mode=prod","electron_args":"dist-darwin-unsigned","goos":"darwin","goarch":"amd64","suffix":"mac.dmg","e2e_shards":""}'
       packageManager: pnpm@12.6.0
+      ref: ${{ needs.prepare.outputs.tag }}
 
   build-macos-arm64:
     name: Build macOS Apple Silicon package
     # macOS 运行器并发有限，两个 macOS 任务串行执行，避免后一个在排队中被取消
-    needs: build-macos
+    needs: [prepare, build-macos]
     uses: ./.github/workflows/desktop-build.yml
     with:
-      config: '{"os":"macos-latest","name":"macos build mac-arm64.dmg","kernel_path":"../app/kernel-darwin-arm64/SiYuan-Kernel","build_args_prefix":"-s -w -X","build_args_suffix":"Mode=prod","electron_args":"dist-darwin-arm64-unsigned","goos":"darwin","goarch":"arm64","suffix":"mac-arm64.dmg","e2e_shards":""}'
+      config: '{"os":"macos-15","name":"macos build mac-arm64.dmg","kernel_path":"../app/kernel-darwin-arm64/SiYuan-Kernel","build_args_prefix":"-s -w -X","build_args_suffix":"Mode=prod","electron_args":"dist-darwin-arm64-unsigned","goos":"darwin","goarch":"arm64","suffix":"mac-arm64.dmg","e2e_shards":""}'
       packageManager: pnpm@12.6.0
+      ref: ${{ needs.prepare.outputs.tag }}
 
   publish:
     name: Publish release

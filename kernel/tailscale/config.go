@@ -22,6 +22,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/siyuan-note/siyuan/kernel/util"
@@ -42,12 +43,16 @@ type NodeStatus struct {
 }
 
 // Config 是配置目录下 tailscale.json 的结构；文件不存在时内嵌 Tailscale 整体关闭。
+//
+// 配置单独存放而不是写入 conf.json：认证密钥和节点状态不适合进入可导出的设置，
+// 也避免与设置合并语义耦合；界面只通过 getTailscale/setTailscale 读写。
 type Config struct {
-	Enabled  *bool  `json:"enabled"`  // 省略时视为启用，便于只写必要字段
-	Hostname string `json:"hostname"` // 加入 Tailnet 时的节点名
-	AuthKey  string `json:"authKey"`  // 首次加入使用的认证密钥，已加入后可留空
-	Listen   string `json:"listen"`   // SOCKS5 监听地址，仅允许回环地址
-	StateDir string `json:"stateDir"` // 节点状态目录，留空使用配置目录下的 tailscale
+	Enabled      *bool  `json:"enabled"`  // 省略时视为启用，便于只写必要字段
+	Hostname     string `json:"hostname"` // 加入 Tailnet 时的节点名
+	AuthKey      string `json:"authKey"`  // 首次加入使用的认证密钥，已加入后可留空
+	ClearAuthKey bool   `json:"-"`        // 仅用于请求，为 true 时删除已保存的密钥
+	Listen       string `json:"listen"`   // SOCKS5 监听地址，仅允许回环地址
+	StateDir     string `json:"stateDir"` // 节点状态目录，留空使用配置目录下的 tailscale
 }
 
 // LoadConfig 读取配置目录下的 tailscale.json。
@@ -91,9 +96,13 @@ func (c *Config) normalize(configDir string) {
 }
 
 func (c *Config) validate() error {
-	host, _, err := net.SplitHostPort(c.Listen)
+	host, port, err := net.SplitHostPort(c.Listen)
 	if nil != err {
 		return fmt.Errorf("invalid tailscale listen address [%s]: %w", c.Listen, err)
+	}
+	portNumber, err := strconv.Atoi(port)
+	if nil != err || 1 > portNumber || 65535 < portNumber {
+		return fmt.Errorf("tailscale listen port [%s] must be between 1 and 65535", port)
 	}
 	if "localhost" == host {
 		return nil
@@ -138,8 +147,17 @@ func SaveConfig(configDir string, config *Config) error {
 
 // prepareConfig 归一化并校验配置，界面不编辑状态目录，请求中的空值表示沿用已有配置或默认值。
 func prepareConfig(configDir string, config *Config) (*Config, error) {
-	if existing, err := LoadConfig(configDir); nil == err && nil != existing && "" == strings.TrimSpace(config.StateDir) {
-		config.StateDir = existing.StateDir
+	if config.ClearAuthKey {
+		config.AuthKey = ""
+	}
+	if existing, err := LoadConfig(configDir); nil == err && nil != existing {
+		if "" == strings.TrimSpace(config.StateDir) {
+			config.StateDir = existing.StateDir
+		}
+		// 界面不再回填已保存的密钥，空值表示沿用现有密钥；显式清除时保持为空
+		if "" == strings.TrimSpace(config.AuthKey) && !config.ClearAuthKey {
+			config.AuthKey = existing.AuthKey
+		}
 	}
 	config.normalize(configDir)
 	if err := config.validate(); nil != err {
@@ -158,13 +176,27 @@ func writeConfigFile(configDir string, config *Config) error {
 	}
 	data = append(data, '\n')
 
-	configPath := filepath.Join(configDir, configFileName)
-	tmpPath := configPath + ".tmp"
-	if err = os.WriteFile(tmpPath, data, 0600); nil != err {
+	// 临时文件名唯一，避免并发保存时互相覆盖；CreateTemp 默认权限为 0600
+	tmp, err := os.CreateTemp(configDir, configFileName+".tmp-*")
+	if nil != err {
+		return fmt.Errorf("create temporary tailscale config failed: %w", err)
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+	if _, err = tmp.Write(data); nil != err {
+		tmp.Close()
 		return fmt.Errorf("write tailscale config [%s] failed: %w", tmpPath, err)
 	}
+	if err = tmp.Sync(); nil != err {
+		tmp.Close()
+		return fmt.Errorf("sync tailscale config [%s] failed: %w", tmpPath, err)
+	}
+	if err = tmp.Close(); nil != err {
+		return fmt.Errorf("close tailscale config [%s] failed: %w", tmpPath, err)
+	}
+
+	configPath := filepath.Join(configDir, configFileName)
 	if err = os.Rename(tmpPath, configPath); nil != err {
-		os.Remove(tmpPath)
 		return fmt.Errorf("replace tailscale config [%s] failed: %w", configPath, err)
 	}
 	return nil

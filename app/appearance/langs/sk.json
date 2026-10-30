@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Vymazať uložený kľúč",
+	"tailscaleAuthKeySaved": "Uložené, ponechajte prázdne, ak chcete zachovať aktuálny kľúč",
+	"tailscaleConfigError": "Chyba konfigurácie Tailscale",
+	"tailscaleStartError": "Tailscale sa nepodarilo spustiť",
 	"tailscaleWaitingAuth": "Čakanie na odkaz na prihlásenie, skontrolujte sieť alebo proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Spúšťa vstavaný uzol Tailscale v jadre a sprístupňuje zariadenia vo vašom tailnete cez lokálnu proxy SOCKS5",

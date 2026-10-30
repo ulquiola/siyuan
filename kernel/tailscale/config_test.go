@@ -17,8 +17,10 @@
 package tailscale
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -108,6 +110,15 @@ func TestLoadConfigRejectsNonLoopbackListen(t *testing.T) {
 	}
 }
 
+func TestLoadConfigRejectsInvalidPort(t *testing.T) {
+	for _, listen := range []string{"127.0.0.1:", "127.0.0.1:0", "127.0.0.1:70000", "127.0.0.1:port"} {
+		configDir := writeConfig(t, `{"listen":"`+listen+`"}`)
+		if _, err := LoadConfig(configDir); nil == err {
+			t.Fatalf("listen %q should be rejected", listen)
+		}
+	}
+}
+
 func TestLoadConfigInvalidContent(t *testing.T) {
 	if _, err := LoadConfig(writeConfig(t, "{")); nil == err {
 		t.Fatal("invalid JSON should fail")
@@ -143,6 +154,36 @@ func TestPrepareConfigInheritsStateDir(t *testing.T) {
 	}
 }
 
+func TestPrepareConfigKeepsSavedAuthKey(t *testing.T) {
+	configDir := writeConfig(t, `{"authKey":"tskey-saved"}`)
+	config, err := prepareConfig(configDir, &Config{Listen: "127.0.0.1:2055"})
+	if nil != err {
+		t.Fatalf("prepare config: %s", err)
+	}
+	if "tskey-saved" != config.AuthKey {
+		t.Fatalf("auth key = %q, want inherited value", config.AuthKey)
+	}
+
+	config, err = prepareConfig(configDir, &Config{AuthKey: "tskey-new", Listen: "127.0.0.1:2055"})
+	if nil != err {
+		t.Fatalf("prepare config: %s", err)
+	}
+	if "tskey-new" != config.AuthKey {
+		t.Fatalf("auth key = %q, want new value", config.AuthKey)
+	}
+}
+
+func TestPrepareConfigClearsSavedAuthKey(t *testing.T) {
+	configDir := writeConfig(t, `{"authKey":"tskey-saved"}`)
+	config, err := prepareConfig(configDir, &Config{ClearAuthKey: true, AuthKey: "tskey-typed", Listen: "127.0.0.1:2055"})
+	if nil != err {
+		t.Fatalf("prepare config: %s", err)
+	}
+	if "" != config.AuthKey {
+		t.Fatalf("auth key = %q, want cleared value", config.AuthKey)
+	}
+}
+
 func TestPrepareConfigUsesDefaultStateDir(t *testing.T) {
 	configDir := t.TempDir()
 	config, err := prepareConfig(configDir, &Config{})
@@ -175,8 +216,34 @@ func TestWriteConfigRoundTrip(t *testing.T) {
 	if nil == loaded || loaded.IsEnabled() || "node" != loaded.Hostname || "key" != loaded.AuthKey || "127.0.0.1:2055" != loaded.Listen {
 		t.Fatalf("unexpected round trip result: %#v", loaded)
 	}
-	if _, err = os.Stat(filepath.Join(configDir, configFileName+".tmp")); !os.IsNotExist(err) {
-		t.Fatalf("temporary config file should not remain: %v", err)
+	matches, err := filepath.Glob(filepath.Join(configDir, configFileName+".tmp-*"))
+	if nil != err || 0 != len(matches) {
+		t.Fatalf("temporary config files should not remain: %v, %v", matches, err)
+	}
+}
+
+func TestWriteConfigConcurrent(t *testing.T) {
+	configDir := t.TempDir()
+	var wg sync.WaitGroup
+	for i := range 8 {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			config := &Config{Hostname: fmt.Sprintf("node-%d", i), Listen: "127.0.0.1:2055"}
+			config.normalize(configDir)
+			if err := writeConfigFile(configDir, config); nil != err {
+				t.Errorf("write config: %s", err)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	if _, err := LoadConfig(configDir); nil != err {
+		t.Fatalf("config should stay valid after concurrent writes: %s", err)
+	}
+	matches, err := filepath.Glob(filepath.Join(configDir, configFileName+".tmp-*"))
+	if nil != err || 0 != len(matches) {
+		t.Fatalf("temporary config files should not remain: %v, %v", matches, err)
 	}
 }
 

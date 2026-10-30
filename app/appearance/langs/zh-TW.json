@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "清除已儲存的金鑰",
+	"tailscaleAuthKeySaved": "已儲存，留空表示保持不變",
+	"tailscaleConfigError": "Tailscale 設定錯誤",
+	"tailscaleStartError": "Tailscale 啟動失敗",
 	"tailscaleWaitingAuth": "正在等待登入連結，請檢查網路或代理",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "在內核中執行 Tailscale 節點，透過本機 SOCKS5 代理存取 Tailnet 中的裝置",

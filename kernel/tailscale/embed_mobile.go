@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//go:build mobile
+//go:build android || ios
 
 package tailscale
 
 // Apply 在移动端是空实现：移动端由系统级 Tailscale 客户端处理网络，避免链接完整的用户态网络栈。
+// 鸿蒙内核以 GOOS=android 构建，同样使用这里的空实现。
 func Apply(configDir string) {
 	_ = configDir
 }

@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "ลบคีย์ที่บันทึกไว้",
+	"tailscaleAuthKeySaved": "บันทึกแล้ว เว้นว่างไว้เพื่อใช้คีย์ปัจจุบัน",
+	"tailscaleConfigError": "ข้อผิดพลาดการกำหนดค่า Tailscale",
+	"tailscaleStartError": "เริ่ม Tailscale ไม่สำเร็จ",
 	"tailscaleWaitingAuth": "กำลังรอลิงก์เข้าสู่ระบบ ตรวจสอบเครือข่ายหรือพร็อกซี",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "รันโหนด Tailscale ที่ฝังในเคอร์เนลและเข้าถึงอุปกรณ์ใน tailnet ผ่านพร็อกซี SOCKS5 ภายในเครื่อง",

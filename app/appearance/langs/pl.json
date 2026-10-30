@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Wyczyść zapisany klucz",
+	"tailscaleAuthKeySaved": "Zapisano, pozostaw puste, aby zachować bieżący klucz",
+	"tailscaleConfigError": "Błąd konfiguracji Tailscale",
+	"tailscaleStartError": "Nie udało się uruchomić Tailscale",
 	"tailscaleWaitingAuth": "Oczekiwanie na link logowania, sprawdź sieć lub serwer proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Uruchamia wbudowany węzeł Tailscale w jądrze i udostępnia urządzenia w tailnecie przez lokalny serwer proxy SOCKS5",

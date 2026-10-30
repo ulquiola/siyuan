@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "保存済みのキーを削除",
+	"tailscaleAuthKeySaved": "保存済み、空欄のままにすると現在のキーを保持します",
+	"tailscaleConfigError": "Tailscale 設定エラー",
+	"tailscaleStartError": "Tailscale の起動に失敗しました",
 	"tailscaleWaitingAuth": "ログインリンクを待機しています。ネットワークまたはプロキシを確認してください",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "カーネル内で Tailscale ノードを実行し、ローカルの SOCKS5 プロキシ経由で Tailnet 内のデバイスにアクセスします",

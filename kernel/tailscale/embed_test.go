@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//go:build !mobile
+//go:build !android && !ios
 
 package tailscale
 
@@ -28,9 +28,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/net/tshttpproxy"
+	"tailscale.com/tsnet"
 )
 
 func TestEnsureControlProxyDirect(t *testing.T) {
@@ -72,6 +74,15 @@ func TestControlLogfKeepsLastControlError(t *testing.T) {
 	controlLogf("%s", "control: "+strings.Repeat("x", 400)+" error")
 	if controlErrLimit < len(lastControlError()) {
 		t.Fatalf("control error should be truncated, got [%d] bytes", len(lastControlError()))
+	}
+
+	// 多字节文本按字符截断，不能留下半个字符
+	controlLogf("%s", "control: "+strings.Repeat("错", controlErrLimit+10)+" error")
+	if got := lastControlError(); controlErrLimit != len([]rune(got)) {
+		t.Fatalf("control error should be truncated to %d runes, got [%d]", controlErrLimit, len([]rune(got)))
+	}
+	if strings.ContainsRune(lastControlError(), utf8.RuneError) {
+		t.Fatalf("control error should not contain replacement characters, got [%s]", lastControlError())
 	}
 
 	resetControlError()
@@ -150,7 +161,7 @@ func TestAuthURLCacheSurvivesQueryFailure(t *testing.T) {
 		t.Fatalf("cache should keep the auth url, got [%s]", cachedAuthURL())
 	}
 
-	setLastError(errors.New("query failed"))
+	setLastError("tailscaleStartError", errors.New("query failed"))
 	failed := Status()
 	if "error" != failed.State || "https://login.tailscale.com/a/9" != failed.AuthURL {
 		t.Fatalf("error status should still carry the cached auth url, got %#v", failed)
@@ -286,4 +297,46 @@ func socks5Connect(t *testing.T, proxyAddr string) net.Conn {
 		t.Fatalf("read bound address: %s", err)
 	}
 	return conn
+}
+
+func TestRunningNodeStopClosesListener(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if nil != err {
+		t.Fatalf("listen: %s", err)
+	}
+	serverClosed := false
+	node := &runningNode{
+		listener:    listener,
+		config:      &Config{Hostname: "node"},
+		closeServer: func() error { serverClosed = true; return nil },
+	}
+	node.stop()
+
+	if !serverClosed {
+		t.Fatal("server should be closed")
+	}
+	if _, err = listener.Accept(); !errors.Is(err, net.ErrClosed) {
+		t.Fatalf("listener should be closed, got %v", err)
+	}
+}
+
+func TestIsCurrentNode(t *testing.T) {
+	server := &tsnet.Server{}
+	other := &tsnet.Server{}
+	nodeMu.Lock()
+	previous := current
+	current = &runningNode{server: server}
+	nodeMu.Unlock()
+	t.Cleanup(func() {
+		nodeMu.Lock()
+		current = previous
+		nodeMu.Unlock()
+	})
+
+	if !isCurrentNode(server) {
+		t.Fatal("current node should be recognized")
+	}
+	if isCurrentNode(other) {
+		t.Fatal("other node should not be recognized")
+	}
 }

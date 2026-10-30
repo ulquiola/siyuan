@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Effacer la clé enregistrée",
+	"tailscaleAuthKeySaved": "Enregistrée, laissez vide pour conserver la clé actuelle",
+	"tailscaleConfigError": "Erreur de configuration Tailscale",
+	"tailscaleStartError": "Échec du démarrage de Tailscale",
 	"tailscaleWaitingAuth": "En attente du lien de connexion, vérifiez le réseau ou le proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Exécuter un nœud Tailscale intégré au noyau et accéder aux appareils de votre tailnet via le proxy SOCKS5 local",

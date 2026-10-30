@@ -26,10 +26,19 @@ type NetworkData struct {
 
 // TailscaleConfig 是内嵌 Tailscale 节点的可编辑配置，状态目录由内核维护，不在界面暴露。
 type TailscaleConfig struct {
-	Enabled  bool   `json:"enabled"`
-	Hostname string `json:"hostname"`
-	AuthKey  string `json:"authKey"`
-	Listen   string `json:"listen"`
+	Enabled      bool   `json:"enabled"`
+	Hostname     string `json:"hostname"`
+	AuthKeySaved bool   `json:"authKeySaved"` // 是否已经保存过密钥，密钥本身不会返回
+	Listen       string `json:"listen"`
+}
+
+// TailscaleConfigRequest 是保存 Tailscale 配置的请求体，不包含只用于响应的 authKeySaved。
+type TailscaleConfigRequest struct {
+	Enabled      bool   `json:"enabled"`
+	Hostname     string `json:"hostname"`
+	AuthKey      string `json:"authKey"`      // 为空表示沿用已保存的密钥
+	ClearAuthKey bool   `json:"clearAuthKey"` // 为 true 时删除已保存的密钥
+	Listen       string `json:"listen"`
 }
 
 // TailscaleStatus 是内嵌节点当前的运行状态，state 取值 disabled、starting、needsLogin、running 或 error。

@@ -29,7 +29,7 @@ jobs:
       - run: go version
 
       - name: Set up goversioninfo
-        run: go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo && go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo
+        run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0
         working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/kernel
         env:
           GO111MODULE: on

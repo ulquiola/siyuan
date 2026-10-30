@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Cancella la chiave salvata",
+	"tailscaleAuthKeySaved": "Salvata, lascia vuoto per mantenere la chiave attuale",
+	"tailscaleConfigError": "Errore di configurazione di Tailscale",
+	"tailscaleStartError": "Avvio di Tailscale non riuscito",
 	"tailscaleWaitingAuth": "In attesa del link di accesso, controlla la rete o il proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Esegue un nodo Tailscale integrato nel kernel e raggiunge i dispositivi del tailnet tramite il proxy SOCKS5 locale",

@@ -50,12 +50,16 @@ sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/
 apk add --no-cache ca-certificates wget xz
 # 安装 musl 交叉编译工具链：musl 生成可在 Alpine 运行的目标架构二进制
 MUSL_ARCH=""
+MUSL_SHA256=""
 case "$TARGETARCH" in
-  amd64) MUSL_ARCH="x86_64-linux-musl" ;;
-  arm64) MUSL_ARCH="aarch64-linux-musl" ;;
+  amd64) MUSL_ARCH="x86_64-linux-musl"; MUSL_SHA256="c5d410d9f82a4f24c549fe5d24f988f85b2679b452413a9f7e5f7b956f2fe7ea" ;;
+  arm64) MUSL_ARCH="aarch64-linux-musl"; MUSL_SHA256="c909817856d6ceda86aa510894fa3527eac7989f0ef6e87b5721c58737a06c38" ;;
+  *) echo "unsupported TARGETARCH: $TARGETARCH"; exit 1 ;;
 esac
-wget -qO /tmp/musl.tar.xz "https://musl.cc/${MUSL_ARCH}-cross.tgz"
-tar -xzf /tmp/musl.tar.xz -C /opt
+wget -q -t 3 -O /tmp/musl-cross.tgz "https://github.com/musl-cc/musl.cc/releases/download/v0.0.1/${MUSL_ARCH}-cross.tgz"
+echo "${MUSL_SHA256}  /tmp/musl-cross.tgz" > /tmp/musl-cross.sha256
+sha256sum -c /tmp/musl-cross.sha256
+tar -xzf /tmp/musl-cross.tgz -C /opt
 ln -s /opt/${MUSL_ARCH}-cross/bin/${MUSL_ARCH}-gcc /usr/local/bin/${MUSL_ARCH}-gcc
 go env -w GO111MODULE=on
 go env -w CGO_ENABLED=1
@@ -176,15 +180,14 @@ COPY --from=onnx-runtime /onnx-artifacts/ /ocr/linux-${TARGETARCH}/
 
 FROM ${ALPINE_IMAGE}
 LABEL maintainer="Liang Ding<845765@qq.com>"
-LABEL modifier="ulquiola@163.com>"
+LABEL modifier="ulquiola@163.com"
 
 RUN sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories \
-    && apk add --no-cache 'ca-certificates>=20261020-r0' tzdata libstdc++
+    && apk add --no-cache 'ca-certificates>=20261020-r0' tzdata su-exec libstdc++
 
 ENV TZ=Asia/Shanghai
+ENV HOME=/home/siyuan
 ENV RUN_IN_CONTAINER=true
-ENV LANG=zh_CN.UTF-8
-ENV LC_ALL=zh_CN.UTF-8
 EXPOSE 6806
 VOLUME /siyuan/workspace
 

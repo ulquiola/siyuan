@@ -684,6 +684,9 @@ def collect_local_notices():
             notices[f"{local_root}/{name}"] = content
     for local_path in LOCAL_NOTICE_FILES:
         path = REPO_ROOT / local_path
+        if not path.is_file():
+            # Optional assets may be absent in a source checkout.
+            continue
         notices[local_path] = path.read_text(encoding="utf-8", errors="replace")
     return sorted(notices.items())
 
@@ -750,6 +753,8 @@ def detect_license(text):
         return "MIT"
     if "permission to use, copy, modify, and/or distribute this software" in lowered:
         return "ISC"
+    if "permission to use, copy, modify, and distribute this software" in lowered:
+        return "ISC"
     if "redistribution and use in source and binary forms" in lowered:
         if "neither the name" in lowered or "names of its contributors" in lowered:
             return "BSD-3-Clause"
@@ -801,7 +806,15 @@ def collect_go_modules():
         process = subprocess.run(
             command,
             cwd=KERNEL_ROOT,
-            env={**os.environ, "GOFLAGS": "-mod=readonly", "GOOS": goos, "GOARCH": goarch},
+            env={
+                **os.environ,
+                "GOFLAGS": "-mod=readonly",
+                "GOOS": goos,
+                "GOARCH": goarch,
+                # Mobile targets depend on cgo packages; desktop targets must not
+                # inherit an ambient cgo setting that needs a cross toolchain.
+                "CGO_ENABLED": "1" if goos in ("android", "ios") else "0",
+            },
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -995,7 +1008,11 @@ def render_notices(runtime_packages, go_modules):
         encoding="utf-8",
         check=True,
     )
-    go_license = Path(goroot_process.stdout.strip()) / "LICENSE"
+    go_root = Path(goroot_process.stdout.strip())
+    go_license = go_root / "LICENSE"
+    if not go_license.is_file():
+        # Homebrew keeps the Go license next to GOROOT/libexec instead of inside it.
+        go_license = go_root.parent / "LICENSE"
     lines.extend(["### Go standard library and runtime", ""])
     lines.extend(code_block(go_license.read_text(encoding="utf-8", errors="replace")))
     lines.append("")
@@ -1068,7 +1085,8 @@ def render_notices(runtime_packages, go_modules):
 def main():
     runtime_packages = collect_runtime_packages()
     go_modules = collect_go_modules()
-    OUTPUT.write_text(render_notices(runtime_packages, go_modules), encoding="utf-8", newline="\n")
+    with OUTPUT.open("w", encoding="utf-8", newline="\n") as output:
+        output.write(render_notices(runtime_packages, go_modules))
     print(f"Generated {OUTPUT} with {len(runtime_packages)} JavaScript packages and {len(go_modules)} Go modules")
 
 

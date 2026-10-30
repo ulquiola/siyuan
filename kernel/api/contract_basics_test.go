@@ -12,10 +12,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/siyuan-note/siyuan/kernel/model"
+	"github.com/siyuan-note/siyuan/kernel/util"
 )
 
 func TestAPIContractBasicRequests(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	// 契约用例不应读取开发者真实的用户配置目录
+	oldHomeDir := util.HomeDir
+	util.HomeDir = t.TempDir()
+	t.Cleanup(func() { util.HomeDir = oldHomeDir })
 	for _, entry := range []struct {
 		path, body string
 		handler    gin.HandlerFunc

@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "सहेजी गई कुंजी हटाएँ",
+	"tailscaleAuthKeySaved": "सहेजा गया, वर्तमान कुंजी रखने के लिए खाली छोड़ें",
+	"tailscaleConfigError": "Tailscale कॉन्फ़िगरेशन त्रुटि",
+	"tailscaleStartError": "Tailscale प्रारंभ करने में विफल",
 	"tailscaleWaitingAuth": "लॉगिन लिंक की प्रतीक्षा है, नेटवर्क या प्रॉक्सी जाँचें",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "कर्नेल में एम्बेडेड Tailscale नोड चलाएँ और स्थानीय SOCKS5 प्रॉक्सी से अपने tailnet के डिवाइस तक पहुँचें",

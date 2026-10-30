@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Opgeslagen sleutel wissen",
+	"tailscaleAuthKeySaved": "Opgeslagen, laat leeg om de huidige sleutel te behouden",
+	"tailscaleConfigError": "Tailscale-configuratiefout",
+	"tailscaleStartError": "Tailscale starten is mislukt",
 	"tailscaleWaitingAuth": "Wachten op de inloglink, controleer het netwerk of de proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Voer een ingebed Tailscale-knooppunt in de kernel uit en bereik apparaten in je tailnet via de lokale SOCKS5-proxy",

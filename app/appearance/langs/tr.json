@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Kaydedilen anahtarı temizle",
+	"tailscaleAuthKeySaved": "Kaydedildi, mevcut anahtarı korumak için boş bırakın",
+	"tailscaleConfigError": "Tailscale yapılandırma hatası",
+	"tailscaleStartError": "Tailscale başlatılamadı",
 	"tailscaleWaitingAuth": "Giriş bağlantısı bekleniyor, ağı veya proxy'yi kontrol edin",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Çekirdekte gömülü bir Tailscale düğümü çalıştırır ve yerel SOCKS5 proxy üzerinden tailnet'inizdeki cihazlara erişir",

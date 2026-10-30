@@ -30,8 +30,8 @@ services:
     container_name: siyuan
     restart: always
     environment:
-      - LANG=zh_CN.UTF-8
-      - LC_ALL=zh_CN.UTF-8
+      - PUID=1000
+      - PGID=1000
     ports:
       - "6806:6806"
     labels:
@@ -48,7 +48,7 @@ docker compose up -d
 docker compose logs -f siyuan
 ```
 
-访问 `http://<主机地址>:6806`。如果系统配置了 HTTP 代理，请把主机地址加入代理绕过列表，否则浏览器的 WebSocket 可能被代理拦截，页面会提示与内核的连接已断开。
+访问 `http://<主机地址>:6806`。容器以 `PUID`/`PGID`（默认 `1000:1000`）运行，工作区文件会归属该用户；需要其他用户时修改这两个值。如果系统配置了 HTTP 代理，请把主机地址加入代理绕过列表，否则浏览器的 WebSocket 可能被代理拦截，页面会提示与内核的连接已断开。
 
 ### 桌面版内置 Tailscale
 
@@ -58,21 +58,23 @@ docker compose logs -f siyuan
 
 - 打开"启用"开关；
 - 节点名留空时使用 `siyuan-desktop`；
-- 认证密钥填 Tailscale 管理台 Settings - Keys 中生成的 reusable key，首次加入成功后可以清空，节点状态会保存在本地；
+- 认证密钥填 Tailscale 管理台 Settings - Keys 中生成的 reusable key，保存后界面不再回显，留空表示沿用已保存的密钥；节点状态会保存在本地；
 - 监听地址留空时使用 `127.0.0.1:1055`，只允许回环地址；
 - 状态行会显示未启用、正在连接、需要登录、已连接（含 Tailnet IP）或错误原因，需要登录时点击"打开登录链接"用浏览器完成认证。
+
+Tailscale 配置保存在用户目录的 `~/.config/siyuan/tailscale.json`（权限 `0600`），不写入 `conf.json`，也不随配置导出。
 
 保存后内核会立即重建内嵌节点，不需要重启思源。
 
 随后在 设置 - 网络代理 中选择 `socks5`、主机 `127.0.0.1`、端口 `1055`；S3 的 Endpoint 填 NAS 的 Tailnet 地址（`100.x.y.z`）。
 
-配置保存在 `~/.config/siyuan/tailscale.json`（Windows 为 `C:\Users\<用户名>\.config\siyuan\tailscale.json`），由界面写入，文件不存在时该功能完全关闭。可选字段：`stateDir` 指定节点状态目录，`enabled` 设为 `false` 临时关闭。
+配置保存在 `~/.config/siyuan/tailscale.json`（Windows 为 `C:\Users\<用户名>\.config\siyuan\tailscale.json`），由界面写入，文件不存在时该功能完全关闭。可选字段：`stateDir` 指定节点状态目录，`enabled` 设为 `false` 临时关闭。如需清除已保存的认证密钥，可以在设置页点击“清除已保存的密钥”，也可以删除文件中的 `authKey` 字段后重启内核。
 
 注意事项：
 
 - 启动日志位于 `~/.config/siyuan/kernel.log`，搜索 `tailscale:` 可以确认节点是否上线；
 - 如果 1055 端口已被 WSL2 中的 Docker 容器占用，需要先停止该容器，否则内嵌节点无法监听；
-- 该功能需要自行构建内核。在 GitHub Actions 中手动运行 `Windows kernel` 工作流，下载构建产物后替换安装目录下的 `resources\kernel\SiYuan-Kernel.exe`。
+- 发布工作流构建的安装包已包含内嵌 Tailscale 的内核；如需单独构建 Windows 内核，可手动运行 `Windows kernel` 工作流并替换安装目录下的 `resources\kernel\SiYuan-Kernel.exe`。
 
 ### 镜像构建与发布
 
@@ -125,7 +127,7 @@ git push origin v3.8.9
 
 安装包内已包含内置 Tailscale 的内核。macOS 安装包没有签名和公证，首次打开需要在 系统设置 - 隐私与安全性 中允许，或执行 `xattr -cr /Applications/SiYuan.app`。
 
-Docker 镜像不通过该工作流发布，使用 `scripts/docker-build.sh` 推送到阿里云仓库，标签为 `v<版本>` 与 `latest`。
+Docker 镜像在 `dev` 分支推送时由 `dockerimage-dev.yml` 发布到 Docker Hub，也可以使用 `scripts/docker-build.sh` 手动推送到阿里云仓库，标签为 `v<版本>` 与 `latest`。
 
 上游官方的正式版发布流程（`dev` 合并到 `master`、签名、公证以及 Android 与鸿蒙产物）依赖官方构建环境，不适用于本仓库。
 

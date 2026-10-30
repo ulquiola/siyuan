@@ -55829,8 +55829,8 @@
     "TailscaleConfig": {
       "type": "object",
       "properties": {
-        "authKey": {
-          "type": "string"
+        "authKeySaved": {
+          "type": "boolean"
         },
         "enabled": {
           "type": "boolean"
@@ -55843,18 +55843,21 @@
         }
       },
       "required": [
-        "authKey",
+        "authKeySaved",
         "enabled",
         "hostname",
         "listen"
       ],
       "additionalProperties": false
     },
-    "TailscaleConfigInput": {
+    "TailscaleConfigRequestInput": {
       "type": "object",
       "properties": {
         "authKey": {
           "type": "string"
+        },
+        "clearAuthKey": {
+          "type": "boolean"
         },
         "enabled": {
           "type": "boolean"
@@ -55868,6 +55871,7 @@
       },
       "required": [
         "authKey",
+        "clearAuthKey",
         "enabled",
         "hostname",
         "listen"
@@ -177991,7 +177995,7 @@
       ],
       "body": "json",
       "request": {
-        "$ref": "#/$defs/TailscaleConfigInput"
+        "$ref": "#/$defs/TailscaleConfigRequestInput"
       },
       "response": {
         "anyOf": [

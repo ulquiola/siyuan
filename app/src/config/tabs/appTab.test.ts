@@ -10,10 +10,12 @@ const {parse} = require("ifdef-loader/preprocessor");
 
 type AccessibilitySetting = {enabled: boolean; override: boolean | null};
 type Invoke = (channel: string, data: {cmd: string; enabled?: boolean}) => Promise<AccessibilitySetting>;
+type FetchResponse = {code: number; data?: unknown; msg?: string};
+type FetchPost = (url: string, data: unknown, callback?: (response: FetchResponse) => void) => Promise<void>;
 type Slot = {key: string; html: () => string; afterMount: (root: unknown) => Promise<void>};
 
 const getAccessibilitySlot = (browser: boolean, mobile: boolean, invoke?: Invoke, slotKey = "accessibilitySupport",
-                              switches: string[] = [], scheme = "http"): Slot | undefined => {
+                              switches: string[] = [], scheme = "http", fetchPost?: FetchPost): Slot | undefined => {
     const source = readFileSync(resolve(process.cwd(), "src/config/tabs/appTab.ts"), "utf8");
     const processed = parse(source, {BROWSER: browser, MOBILE: mobile}, false, true);
     const code = transpileModule(processed, {compilerOptions: {module: ModuleKind.CommonJS}}).outputText;
@@ -22,10 +24,13 @@ const getAccessibilitySlot = (browser: boolean, mobile: boolean, invoke?: Invoke
         exports: moduleExports,
         process: {platform: "win32"},
         console: {warn: (): void => undefined},
-        window: {siyuan: {
-            languages: new Proxy({}, {get: (_, key) => String(key)}),
-            config: {system: {isMicrosoftStore: true, networkProxy: {host: 'user:"<&@host', port: "7890", scheme}}},
-        }},
+        window: {
+            siyuan: {
+                languages: new Proxy({}, {get: (_, key) => String(key)}),
+                config: {system: {isMicrosoftStore: true, networkProxy: {host: 'user:"<&@host', port: "7890", scheme}}},
+            },
+            setTimeout: () => 0,
+        },
         require: (name: string) => {
             if (name === "electron") {
                 assert.equal(browser, false);
@@ -39,6 +44,9 @@ const getAccessibilitySlot = (browser: boolean, mobile: boolean, invoke?: Invoke
             }
             if (name === "../../util/escape") {
                 return {escapeHtmlTextAndAttr};
+            }
+            if (name === "../../util/fetch" && fetchPost) {
+                return {fetchPost};
             }
             return new Proxy({}, {get: () => () => ""});
         },
@@ -156,6 +164,82 @@ test("tailscale is configurable on desktop and browser but excluded from mobile"
     }
     assert.equal(getAccessibilitySlot(true, true, undefined, "tailscale"), undefined);
     assert.equal(getAccessibilitySlot(false, true, undefined, "tailscale"), undefined);
+});
+
+type TailscaleElement = {
+    value: string;
+    checked: boolean;
+    disabled: boolean;
+    placeholder: string;
+    textContent: string;
+    classList: {toggle: (_: string, force?: boolean) => void};
+    addEventListener: (_: string, listener: () => void) => void;
+    querySelector: () => null;
+    firstChild: {nodeValue: string} | null;
+};
+
+const tailscaleControls = () => {
+    const listeners: Record<string, () => void> = {};
+    const hidden: Record<string, boolean> = {};
+    const element = (key: string): TailscaleElement => ({
+        value: "",
+        checked: false,
+        disabled: false,
+        placeholder: "",
+        textContent: "",
+        classList: {
+            toggle: (_: string, force?: boolean): void => {
+                hidden[key] = Boolean(force);
+            },
+        },
+        addEventListener: (_: string, listener: () => void): void => {
+            listeners[key] = listener;
+        },
+        querySelector: (): null => null,
+        firstChild: null,
+    });
+    const elements: Record<string, TailscaleElement> = {
+        "#tailscaleEnabled": element("#tailscaleEnabled"),
+        "#tailscaleHostname": element("#tailscaleHostname"),
+        "#tailscaleListen": element("#tailscaleListen"),
+        "#tailscaleAuthKey": element("#tailscaleAuthKey"),
+        "#tailscaleStatus": element("#tailscaleStatus"),
+        "#tailscaleConfirm": element("#tailscaleConfirm"),
+        "#tailscaleClearAuthKey": element("#tailscaleClearAuthKey"),
+    };
+    const root = {querySelector: (selector: string) => elements[selector], isConnected: true};
+    return {root, elements, listeners, hidden};
+};
+
+test("tailscale settings keep the saved key hidden and can clear it", async () => {
+    const calls: {url: string; data: Record<string, unknown>}[] = [];
+    const fetchPost: FetchPost = (url, data, callback) => {
+        calls.push({url, data: data as Record<string, unknown>});
+        const cleared = "/api/system/setTailscale" === url;
+        callback?.({
+            code: 0,
+            data: {
+                config: {enabled: true, hostname: "node", authKeySaved: !cleared, listen: "127.0.0.1:1055"},
+                status: {state: "disabled", authURL: "", ips: null, error: ""},
+            },
+        });
+        return Promise.resolve();
+    };
+    const slot = getAccessibilitySlot(false, false, undefined, "tailscale", [], "http", fetchPost);
+    assert.ok(slot);
+    const view = tailscaleControls();
+    await slot.afterMount(view.root);
+
+    assert.equal(view.elements["#tailscaleAuthKey"].value, "");
+    assert.equal(view.elements["#tailscaleAuthKey"].placeholder, "tailscaleAuthKeySaved");
+    assert.equal(view.hidden["#tailscaleClearAuthKey"], false);
+
+    view.listeners["#tailscaleClearAuthKey"]();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const saveCall = calls.find(call => "/api/system/setTailscale" === call.url);
+    assert.ok(saveCall);
+    assert.equal(saveCall.data.clearAuthKey, true);
+    assert.equal(view.hidden["#tailscaleClearAuthKey"], true);
 });
 
 const controls = () => {

@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Gespeicherten Schlüssel löschen",
+	"tailscaleAuthKeySaved": "Gespeichert, leer lassen, um den aktuellen Schlüssel zu behalten",
+	"tailscaleConfigError": "Tailscale-Konfigurationsfehler",
+	"tailscaleStartError": "Tailscale konnte nicht gestartet werden",
 	"tailscaleWaitingAuth": "Warten auf den Anmeldelink, Netzwerk oder Proxy prüfen",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Einen eingebetteten Tailscale-Knoten im Kernel ausführen und Geräte im Tailnet über den lokalen SOCKS5-Proxy erreichen",

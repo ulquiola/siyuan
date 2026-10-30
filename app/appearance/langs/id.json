@@ -1,4 +1,8 @@
 {
+	"tailscaleClearAuthKey": "Hapus kunci tersimpan",
+	"tailscaleAuthKeySaved": "Tersimpan, biarkan kosong untuk mempertahankan kunci saat ini",
+	"tailscaleConfigError": "Kesalahan konfigurasi Tailscale",
+	"tailscaleStartError": "Gagal memulai Tailscale",
 	"tailscaleWaitingAuth": "Menunggu tautan login, periksa jaringan atau proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Menjalankan node Tailscale tertanam di kernel dan mengakses perangkat di tailnet Anda melalui proxy SOCKS5 lokal",

@@ -30,6 +30,7 @@ import {sendAppSetting} from "./appRuntime";
 import {getHostCapabilities} from "../../util/hostCapabilities";
 import {genWorkspaceStorageHtml, mountWorkspaceStorage} from "./workspaceStorage";
 import {applyTailscaleStatus, ITailscaleLanguages, ITailscaleStatus} from "./tailscaleStatus";
+import type {TailscaleData} from "../../types/api";
 import {importDataFile} from "../../menus/importData";
 
 /// #if MOBILE
@@ -420,11 +421,6 @@ const mountNetworkProxy = (root: HTMLElement) => {
     });
 };
 
-interface ITailscaleData {
-    config: {enabled: boolean; hostname: string; authKey: string; listen: string};
-    status: ITailscaleStatus;
-}
-
 const genTailscaleHtml = (): string => `<div class="b3-label config-item">
     ${genConfigItemName(window.siyuan.languages.tailscale)}
     <div class="b3-label__text">${window.siyuan.languages.tailscaleTip}</div>
@@ -442,6 +438,8 @@ const genTailscaleHtml = (): string => `<div class="b3-label config-item">
     </div>
     <div class="b3-label__text fn__flex" style="overflow: visible !important;">
         <input spellcheck="false" id="tailscaleAuthKey" type="password" autocomplete="off" placeholder="${escapeHtmlTextAndAttr(window.siyuan.languages.tailscaleAuthKey)}" class="b3-text-field fn__flex-1"/>
+        <span class="fn__space"></span>
+        <button id="tailscaleClearAuthKey" class="b3-button fn__size200 b3-button--outline fn__none">${window.siyuan.languages.tailscaleClearAuthKey}</button>
     </div>
     <div id="tailscaleStatus" class="b3-label__text" role="status"></div>
 </div>`;
@@ -453,7 +451,8 @@ const mountTailscale = (root: HTMLElement) => {
     const authKeyElement = root.querySelector("#tailscaleAuthKey") as HTMLInputElement;
     const statusElement = root.querySelector("#tailscaleStatus") as HTMLElement;
     const confirmElement = root.querySelector("#tailscaleConfirm") as HTMLButtonElement;
-    if (!enabledElement || !hostnameElement || !listenElement || !authKeyElement || !statusElement || !confirmElement) {
+    const clearAuthKeyElement = root.querySelector("#tailscaleClearAuthKey") as HTMLButtonElement;
+    if (!enabledElement || !hostnameElement || !listenElement || !authKeyElement || !statusElement || !confirmElement || !clearAuthKeyElement) {
         return;
     }
 
@@ -461,11 +460,16 @@ const mountTailscale = (root: HTMLElement) => {
         applyTailscaleStatus(statusElement, status, window.siyuan.languages as ITailscaleLanguages);
     };
 
-    const applyData = (data: ITailscaleData) => {
+    const applyData = (data: TailscaleData) => {
         enabledElement.checked = data.config.enabled;
         hostnameElement.value = data.config.hostname;
         listenElement.value = data.config.listen;
-        authKeyElement.value = data.config.authKey;
+        // 内核不回传已保存的密钥，空输入框只表示不修改
+        authKeyElement.value = "";
+        authKeyElement.placeholder = data.config.authKeySaved
+            ? window.siyuan.languages.tailscaleAuthKeySaved
+            : window.siyuan.languages.tailscaleAuthKey;
+        clearAuthKeyElement.classList.toggle("fn__none", !data.config.authKeySaved);
         renderStatus(data.status);
     };
 
@@ -475,7 +479,7 @@ const mountTailscale = (root: HTMLElement) => {
                 renderStatus({state: "error", authURL: "", ips: null, error: response.msg});
                 return;
             }
-            const data = response.data as ITailscaleData;
+            const data = response.data as TailscaleData;
             if (withConfig) {
                 applyData(data);
             } else {
@@ -484,15 +488,17 @@ const mountTailscale = (root: HTMLElement) => {
         });
     };
 
-    confirmElement.addEventListener("click", () => {
+    const save = (clearAuthKey: boolean) => {
         confirmElement.disabled = true;
+        clearAuthKeyElement.disabled = true;
         fetchPost("/api/system/setTailscale", {
             enabled: enabledElement.checked,
             hostname: hostnameElement.value.trim(),
             authKey: authKeyElement.value.trim(),
+            clearAuthKey,
             listen: listenElement.value.trim(),
         }, (response) => {
-            const data = response.data as ITailscaleData;
+            const data = response.data as TailscaleData;
             applyData(data);
             // 内核在后台重建节点，保存瞬间可能仍返回旧状态，先按目标状态提示
             if (!data.config.enabled) {
@@ -502,8 +508,12 @@ const mountTailscale = (root: HTMLElement) => {
             }
         }).finally(() => {
             confirmElement.disabled = false;
+            clearAuthKeyElement.disabled = false;
         });
-    });
+    };
+
+    confirmElement.addEventListener("click", () => save(false));
+    clearAuthKeyElement.addEventListener("click", () => save(true));
 
     refresh(true);
     const poll = () => {
