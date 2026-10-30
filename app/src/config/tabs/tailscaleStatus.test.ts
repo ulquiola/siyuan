@@ -73,6 +73,18 @@ test("错误与未启用状态不叠加等待提示", () => {
     assert.equal(load().describeTailscaleStatus(status("disabled"), languages).text, "未启用");
 });
 
+test("未连接时展示控制面失败的真实原因", () => {
+    const ret = load().describeTailscaleStatus(status("starting", "", "proxyconnect tcp: connection refused"), languages);
+    assert.equal(ret.text,
+        "正在连接 · 错误: proxyconnect tcp: connection refused · 正在等待登录链接，请检查网络或代理");
+    assert.equal(ret.loginURL, "");
+});
+
+test("已连接时不展示任何错误", () => {
+    const ret = load().describeTailscaleStatus(status("running", "", "proxyconnect tcp: connection refused"), languages);
+    assert.equal(ret.text, "已连接");
+});
+
 // 仅供本文件使用的极简 DOM：只模拟 applyTailscaleStatus 用到的节点与查询能力
 const makeElement = () => {
     type FakeChild = {tagName?: string; nodeValue?: string; href?: string; textContent?: string};

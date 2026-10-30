@@ -25,7 +25,8 @@ export interface ITailscaleLanguages {
 /**
  * 计算状态文案与登录链接。
  *
- * 已连接时文案附带 Tailnet 地址，且不再给出登录链接；等待登录类状态在没有认证地址时追加等待提示。
+ * 已连接时文案附带 Tailnet 地址，且不再给出登录链接与错误；未连接时若有控制面错误，额外附上真实原因，
+ * 等待登录类状态在没有认证地址时追加等待提示。
  */
 export const describeTailscaleStatus = (status: ITailscaleStatus,
                                         languages: ITailscaleLanguages): ITailscaleStatusView => {
@@ -43,11 +44,20 @@ export const describeTailscaleStatus = (status: ITailscaleStatus,
             text = languages.tailscaleNeedsLogin;
             break;
         case "error":
-            text = status.error ? `${languages.tailscaleError}: ${status.error}` : languages.tailscaleError;
+            text = languages.tailscaleError;
             break;
         default:
             text = languages.tailscaleDisabled;
             break;
+    }
+
+    // 未连接时把控制面失败的真实原因一并展示，避免用户只看一句泛泛的等待提示
+    const detail = status.error ? `${languages.tailscaleError}: ${status.error}` : "";
+    if ("error" === status.state) {
+        // 错误状态直接用真实原因代替泛化文案
+        text = detail || text;
+    } else if (detail) {
+        text = `${text} · ${detail}`;
     }
 
     if (status.authURL) {
