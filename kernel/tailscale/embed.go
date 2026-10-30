@@ -182,6 +182,17 @@ func Status() NodeStatus {
 	return ret
 }
 
+// StatusFor 返回内嵌节点当前的运行状态，并结合配置区分「未启用」与「已启用但节点还没建好」。
+//
+// 用户刚保存配置时节点需要重新建立，这期间状态查询只能得到未启用，此时按正在连接上报，避免界面显示成开关没有生效。
+func StatusFor(config *Config) NodeStatus {
+	status := Status()
+	if nil != config && config.IsEnabled() && "disabled" == status.State {
+		status.State = "starting"
+	}
+	return status
+}
+
 // rememberAuthURL 缓存最近一次成功查询得到的登录链接，空串即为清空。
 func rememberAuthURL(url string) {
 	authURLMu.Lock()

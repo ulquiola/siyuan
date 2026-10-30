@@ -113,6 +113,20 @@ func TestAuthURLCacheSurvivesQueryFailure(t *testing.T) {
 	}
 }
 
+func TestStatusForEnabledWithoutNodeIsStarting(t *testing.T) {
+	enabled := true
+	if got := StatusFor(&Config{Enabled: &enabled}); "starting" != got.State {
+		t.Fatalf("enabled config without node should be starting, got [%s]", got.State)
+	}
+	disabled := false
+	if got := StatusFor(&Config{Enabled: &disabled}); "disabled" != got.State {
+		t.Fatalf("disabled config should stay disabled, got [%s]", got.State)
+	}
+	if got := StatusFor(nil); "disabled" != got.State {
+		t.Fatalf("nil config should stay disabled, got [%s]", got.State)
+	}
+}
+
 func TestUserLogfFoldsRepeatedMessages(t *testing.T) {
 	logger := &userLogf{}
 	if !logger.shouldLog("login required") {

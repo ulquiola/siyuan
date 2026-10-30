@@ -88,12 +88,14 @@ var getNetwork = contractHandler(apicontract.GetNetwork, func(c *gin.Context, re
 func tailscaleData() apicontract.TailscaleData {
 	configDir := tailscale.ConfigDir()
 	config, err := tailscale.LoadConfig(configDir)
-	status := tailscale.Status()
-	if nil != err {
-		status = tailscale.NodeStatus{State: "error", Error: err.Error()}
-	}
 	if nil == config {
 		config = tailscale.NewConfig(configDir)
+	}
+	status := tailscale.StatusFor(config)
+	if nil != err {
+		// 配置解析失败时只覆写状态和原因，保留已缓存的登录链接与地址
+		status.State = "error"
+		status.Error = err.Error()
 	}
 	return apicontract.TailscaleData{
 		Config: apicontract.TailscaleConfig{

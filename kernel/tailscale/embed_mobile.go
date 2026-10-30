@@ -27,3 +27,9 @@ func Apply(configDir string) {
 func Status() NodeStatus {
 	return NodeStatus{State: "disabled"}
 }
+
+// StatusFor 在移动端直接返回 Status：移动端没有内嵌节点，不存在尚未建好的等待过程。
+func StatusFor(config *Config) NodeStatus {
+	_ = config
+	return Status()
+}
