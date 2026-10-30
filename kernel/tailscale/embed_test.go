@@ -20,6 +20,7 @@ package tailscale
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -84,6 +85,31 @@ func TestStatusFromStateTreatsStoppedAsStarting(t *testing.T) {
 	}
 	if got := statusFromState(&ipnstate.Status{BackendState: "Stopped", AuthURL: "https://login.tailscale.com/a/1"}); "https://login.tailscale.com/a/1" != got.AuthURL {
 		t.Fatalf("auth url should survive, got [%s]", got.AuthURL)
+	}
+}
+
+func TestAuthURLCacheSurvivesQueryFailure(t *testing.T) {
+	defer func() {
+		rememberAuthURL("")
+		nodeMu.Lock()
+		lastErr = ""
+		nodeMu.Unlock()
+	}()
+
+	rememberAuthURL("https://login.tailscale.com/a/9")
+	if "https://login.tailscale.com/a/9" != cachedAuthURL() {
+		t.Fatalf("cache should keep the auth url, got [%s]", cachedAuthURL())
+	}
+
+	setLastError(errors.New("query failed"))
+	failed := Status()
+	if "error" != failed.State || "https://login.tailscale.com/a/9" != failed.AuthURL {
+		t.Fatalf("error status should still carry the cached auth url, got %#v", failed)
+	}
+
+	rememberAuthURL("")
+	if "" != cachedAuthURL() {
+		t.Fatalf("empty url should clear the cache, got [%s]", cachedAuthURL())
 	}
 }
 

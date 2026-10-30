@@ -36,7 +36,7 @@ import (
 
 const (
 	nodeOnlineLogInterval = time.Second
-	statusQueryTimeout    = 2 * time.Second
+	statusQueryTimeout    = 5 * time.Second
 )
 
 // userLogf 把 tsnet 的用户日志转写到内核日志，并折叠连续重复的内容。
@@ -84,6 +84,10 @@ var (
 	nodeMu  sync.Mutex
 	current *runningNode
 	lastErr string
+
+	// 状态查询可能超时或失败，登录链接单独缓存，保证失败时仍能交给用户完成登录
+	authURLMu   sync.Mutex
+	lastAuthURL string
 )
 
 // Apply 按配置文件重建内嵌节点：配置缺失或未启用时停止节点，否则先停再启。
@@ -98,6 +102,8 @@ func Apply(configDir string) {
 	current = nil
 	lastErr = ""
 	nodeMu.Unlock()
+	// 节点重建后旧的登录链接已失效，缓存随之清空，避免禁用或启动失败时沿用上一节点的链接
+	rememberAuthURL("")
 	if nil != previous {
 		previous.stop()
 	}
@@ -154,7 +160,7 @@ func Status() NodeStatus {
 
 	if nil == node {
 		if "" != errMessage {
-			return NodeStatus{State: "error", Error: errMessage}
+			return NodeStatus{State: "error", Error: errMessage, AuthURL: cachedAuthURL()}
 		}
 		return NodeStatus{State: "disabled"}
 	}
@@ -163,13 +169,31 @@ func Status() NodeStatus {
 	defer cancel()
 	client, err := node.server.LocalClient()
 	if nil != err {
-		return NodeStatus{State: "error", Error: err.Error()}
+		return NodeStatus{State: "error", Error: err.Error(), AuthURL: cachedAuthURL()}
 	}
-	status, err := client.Status(ctx)
+	// 状态查询只为拿到后端状态与登录链接，不需要 peer 列表，避免大网络下查询超时
+	status, err := client.StatusWithoutPeers(ctx)
 	if nil != err {
-		return NodeStatus{State: "error", Error: err.Error()}
+		return NodeStatus{State: "error", Error: err.Error(), AuthURL: cachedAuthURL()}
 	}
-	return statusFromState(status)
+	ret := statusFromState(status)
+	// 只在查询成功时写入缓存，空串表示已完成登录，同样需要覆盖旧链接
+	rememberAuthURL(ret.AuthURL)
+	return ret
+}
+
+// rememberAuthURL 缓存最近一次成功查询得到的登录链接，空串即为清空。
+func rememberAuthURL(url string) {
+	authURLMu.Lock()
+	lastAuthURL = url
+	authURLMu.Unlock()
+}
+
+// cachedAuthURL 返回缓存的登录链接，供状态查询失败时继续展示。
+func cachedAuthURL() string {
+	authURLMu.Lock()
+	defer authURLMu.Unlock()
+	return lastAuthURL
 }
 
 func statusFromState(status *ipnstate.Status) NodeStatus {
