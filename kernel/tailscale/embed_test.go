@@ -25,6 +25,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,12 +33,13 @@ import (
 	"tailscale.com/net/tshttpproxy"
 )
 
-func TestConfigureSelfProxySkipsOwnSOCKSListener(t *testing.T) {
+func TestEnsureControlProxyDirect(t *testing.T) {
+	// 思源可能把进程代理设成任意地址，Tailscale 的控制面连接不能跟随
 	t.Setenv("HTTP_PROXY", "socks5://127.0.0.1:1055")
 	t.Setenv("HTTPS_PROXY", "socks5://127.0.0.1:1055")
 	t.Setenv("NO_PROXY", "")
 
-	configureSelfProxy("127.0.0.1:1055")
+	ensureControlProxyDirect()
 
 	request, err := http.NewRequest(http.MethodGet, "https://controlplane.tailscale.com/key", nil)
 	if nil != err {
@@ -49,6 +51,53 @@ func TestConfigureSelfProxySkipsOwnSOCKSListener(t *testing.T) {
 	}
 	if nil != proxy {
 		t.Fatalf("expected direct connection, got proxy [%s]", proxy)
+	}
+}
+
+func TestControlLogfKeepsLastControlError(t *testing.T) {
+	resetControlError()
+	defer resetControlError()
+
+	// 不含错误关键词的控制面日志不应当被当成错误
+	controlLogf("control: authRoutine: loggedIn=false; wantLoggedIn=true")
+	if "" != lastControlError() {
+		t.Fatalf("informational log should be ignored, got [%s]", lastControlError())
+	}
+
+	controlLogf("control: TryLogin: fetch control key: %s", "proxyconnect tcp: connection failed")
+	if !strings.Contains(lastControlError(), "proxyconnect") {
+		t.Fatalf("control error should be kept, got [%s]", lastControlError())
+	}
+
+	controlLogf("%s", "control: "+strings.Repeat("x", 400)+" error")
+	if controlErrLimit < len(lastControlError()) {
+		t.Fatalf("control error should be truncated, got [%d] bytes", len(lastControlError()))
+	}
+
+	resetControlError()
+	if "" != lastControlError() {
+		t.Fatalf("reset should clear the control error, got [%s]", lastControlError())
+	}
+}
+
+func TestWithControlDetail(t *testing.T) {
+	resetControlError()
+	defer resetControlError()
+	controlLogf("control: %s", "mapRoutine failed")
+
+	starting := withControlDetail(NodeStatus{State: "starting"})
+	if "mapRoutine failed" != starting.Error {
+		t.Fatalf("not connected status should carry the control error, got [%s]", starting.Error)
+	}
+
+	running := withControlDetail(NodeStatus{State: "running"})
+	if "" != running.Error {
+		t.Fatalf("running status should not carry the control error, got [%s]", running.Error)
+	}
+
+	existing := withControlDetail(NodeStatus{State: "error", Error: "listen failed"})
+	if "listen failed" != existing.Error {
+		t.Fatalf("existing error should be kept, got [%s]", existing.Error)
 	}
 }
 

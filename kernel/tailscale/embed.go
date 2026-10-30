@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,8 @@ import (
 const (
 	nodeOnlineLogInterval = time.Second
 	statusQueryTimeout    = 5 * time.Second
+	// controlErrLimit 限制交给界面的控制面错误长度，日志里的完整信息仍保留在内核日志中
+	controlErrLimit = 200
 )
 
 // userLogf 把 tsnet 的用户日志转写到内核日志，并折叠连续重复的内容。
@@ -88,12 +91,20 @@ var (
 	// 状态查询可能超时或失败，登录链接单独缓存，保证失败时仍能交给用户完成登录
 	authURLMu   sync.Mutex
 	lastAuthURL string
+
+	// 控制面错误只出现在 tsnet 内部日志里，单独留下最后一条供设置界面展示
+	controlErrMu sync.Mutex
+	controlErr   string
+
+	controlProxyOnce sync.Once
 )
 
 // Apply 按配置文件重建内嵌节点：配置缺失或未启用时停止节点，否则先停再启。
 //
 // 本函数会等待旧节点关闭，因此由调用方放到后台执行；失败只记录状态和日志，不影响内核启动。
 func Apply(configDir string) {
+	ensureControlProxyDirect()
+
 	applyMu.Lock()
 	defer applyMu.Unlock()
 
@@ -105,6 +116,7 @@ func Apply(configDir string) {
 	// 清空发生在重建开始时、旧节点停止之前，此后缓存的链接只会来自新节点，
 	// 禁用或启动失败时也不会沿用上一节点残留的链接
 	rememberAuthURL("")
+	resetControlError()
 	if nil != previous {
 		previous.stop()
 	}
@@ -118,9 +130,6 @@ func Apply(configDir string) {
 		return
 	}
 
-	// 控制面请求不能走本项目自己提供的 SOCKS 端口，否则节点上线前会形成自环
-	configureSelfProxy(config.Listen)
-
 	listener, err := net.Listen("tcp", config.Listen)
 	if nil != err {
 		setLastError(fmt.Errorf("listen [%s] failed: %w", config.Listen, err))
@@ -131,6 +140,7 @@ func Apply(configDir string) {
 		Dir:      config.StateDir,
 		Hostname: config.Hostname,
 		AuthKey:  config.AuthKey,
+		Logf:     controlLogf,
 		UserLogf: (&userLogf{}).logf,
 	}
 	if err = server.Start(); nil != err {
@@ -180,7 +190,7 @@ func Status() NodeStatus {
 	ret := statusFromState(status)
 	// 只在查询成功时写入缓存，空串表示已完成登录，同样需要覆盖旧链接
 	rememberAuthURL(ret.AuthURL)
-	return ret
+	return withControlDetail(ret)
 }
 
 // StatusFor 返回内嵌节点当前的运行状态，并结合配置区分「未启用」与「已启用但节点还没建好」。
@@ -238,13 +248,59 @@ func setLastError(err error) {
 	logging.LogWarnf("tailscale: %s", err)
 }
 
-// configureSelfProxy 让 Tailscale 自身的控制面连接绕过思源配置的代理。
+// ensureControlProxyDirect 让 Tailscale 自身的网络请求始终直连。
 //
-// 当代理地址等于本项目的 SOCKS 监听地址时，控制请求会等待节点上线，而节点上线又依赖控制请求，
-// 形成死锁；SetSelfProxy 会在 Tailscale 内部的代理配置中清除这个自指代理。
-func configureSelfProxy(listen string) {
-	tshttpproxy.SetSelfProxy(listen,
-		"http://"+listen, "https://"+listen, "socks5://"+listen, "socks5h://"+listen)
+// 控制面连接不能跟随思源配置的网络代理：Go 会缓存首次读取的代理环境变量，运行中改代理不会生效；
+// 代理指向本项目自己的 SOCKS 监听地址时还会形成控制面等待节点、节点等待控制面的死锁。
+func ensureControlProxyDirect() {
+	controlProxyOnce.Do(func() {
+		if err := tshttpproxy.SetProxyFunc(func(*url.URL) (*url.URL, error) { return nil, nil }); nil != err {
+			logging.LogWarnf("tailscale: set direct control proxy failed: %s", err)
+		}
+	})
+}
+
+// controlLogf 从 tsnet 的内部日志里留下最后一条控制面错误。
+//
+// 控制面失败只写进日志、不进状态查询结果，界面拿不到，用户只能翻 tailscaled.log。
+func controlLogf(format string, args ...any) {
+	message := fmt.Sprintf(format, args...)
+	if !strings.Contains(message, "control:") {
+		return
+	}
+	if !strings.Contains(message, "failed") && !strings.Contains(message, "error") {
+		return
+	}
+	// 去掉前缀，只保留能直接展示给用户的部分
+	message = strings.TrimSpace(strings.TrimPrefix(message, "control: "))
+	if controlErrLimit < len(message) {
+		message = message[:controlErrLimit]
+	}
+	controlErrMu.Lock()
+	controlErr = message
+	controlErrMu.Unlock()
+}
+
+// withControlDetail 在未连接状态下补上最近一次控制面错误，已连接时保持为空。
+func withControlDetail(status NodeStatus) NodeStatus {
+	if "running" == status.State || "" != status.Error {
+		return status
+	}
+	status.Error = lastControlError()
+	return status
+}
+
+// lastControlError 返回最近一次记录的控制面错误。
+func lastControlError() string {
+	controlErrMu.Lock()
+	defer controlErrMu.Unlock()
+	return controlErr
+}
+
+func resetControlError() {
+	controlErrMu.Lock()
+	controlErr = ""
+	controlErrMu.Unlock()
 }
 
 func serveSOCKS(listener net.Listener, dial func(ctx context.Context, network, address string) (net.Conn, error)) error {
