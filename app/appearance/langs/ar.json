@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "في انتظار رابط تسجيل الدخول، تحقق من الشبكة أو الوكيل",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "تشغيل عقدة Tailscale مدمجة في النواة والوصول إلى الأجهزة في tailnet عبر وكيل SOCKS5 المحلي",
 	"tailscaleHostname": "اسم العقدة",

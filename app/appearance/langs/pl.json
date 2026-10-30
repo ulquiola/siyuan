@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "Oczekiwanie na link logowania, sprawdź sieć lub serwer proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Uruchamia wbudowany węzeł Tailscale w jądrze i udostępnia urządzenia w tailnecie przez lokalny serwer proxy SOCKS5",
 	"tailscaleHostname": "Nazwa węzła",

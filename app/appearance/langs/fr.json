@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "En attente du lien de connexion, vérifiez le réseau ou le proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Exécuter un nœud Tailscale intégré au noyau et accéder aux appareils de votre tailnet via le proxy SOCKS5 local",
 	"tailscaleHostname": "Nom du nœud",

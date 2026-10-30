@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "Wachten op de inloglink, controleer het netwerk of de proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Voer een ingebed Tailscale-knooppunt in de kernel uit en bereik apparaten in je tailnet via de lokale SOCKS5-proxy",
 	"tailscaleHostname": "Knooppuntnaam",

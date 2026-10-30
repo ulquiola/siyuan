@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "Waiting for the login link, check your network or proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Run an embedded Tailscale node in the kernel and reach devices in your tailnet through the local SOCKS5 proxy",
 	"tailscaleHostname": "Node name",

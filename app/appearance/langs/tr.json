@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "Giriş bağlantısı bekleniyor, ağı veya proxy'yi kontrol edin",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Çekirdekte gömülü bir Tailscale düğümü çalıştırır ve yerel SOCKS5 proxy üzerinden tailnet'inizdeki cihazlara erişir",
 	"tailscaleHostname": "Düğüm adı",

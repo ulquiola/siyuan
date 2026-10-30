@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "กำลังรอลิงก์เข้าสู่ระบบ ตรวจสอบเครือข่ายหรือพร็อกซี",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "รันโหนด Tailscale ที่ฝังในเคอร์เนลและเข้าถึงอุปกรณ์ใน tailnet ผ่านพร็อกซี SOCKS5 ภายในเครื่อง",
 	"tailscaleHostname": "ชื่อโหนด",

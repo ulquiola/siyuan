@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "लॉगिन लिंक की प्रतीक्षा है, नेटवर्क या प्रॉक्सी जाँचें",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "कर्नेल में एम्बेडेड Tailscale नोड चलाएँ और स्थानीय SOCKS5 प्रॉक्सी से अपने tailnet के डिवाइस तक पहुँचें",
 	"tailscaleHostname": "नोड नाम",

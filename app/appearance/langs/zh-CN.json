@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "正在等待登录链接，请检查网络或代理",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "在内核中运行 Tailscale 节点，通过本地 SOCKS5 代理访问 Tailnet 中的设备",
 	"tailscaleHostname": "节点名",

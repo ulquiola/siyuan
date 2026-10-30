@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "Ожидание ссылки для входа, проверьте сеть или прокси",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Запускает встроенный узел Tailscale в ядре и открывает доступ к устройствам вашего tailnet через локальный прокси SOCKS5",
 	"tailscaleHostname": "Имя узла",

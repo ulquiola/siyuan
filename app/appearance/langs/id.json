@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "Menunggu tautan login, periksa jaringan atau proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Menjalankan node Tailscale tertanam di kernel dan mengakses perangkat di tailnet Anda melalui proxy SOCKS5 lokal",
 	"tailscaleHostname": "Nama node",

@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "Warten auf den Anmeldelink, Netzwerk oder Proxy prüfen",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Einen eingebetteten Tailscale-Knoten im Kernel ausführen und Geräte im Tailnet über den lokalen SOCKS5-Proxy erreichen",
 	"tailscaleHostname": "Knotenname",

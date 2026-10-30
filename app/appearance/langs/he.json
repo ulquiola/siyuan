@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "ממתין לקישור ההתחברות, בדקו את הרשת או את הפרוקסי",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "הפעלת צומת Tailscale מוטמע בליבה וגישה להתקנים ב-tailnet דרך פרוקסי SOCKS5 מקומי",
 	"tailscaleHostname": "שם הצומת",

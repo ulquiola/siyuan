@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "Чекање на везу за пријаву, проверите мрежу или прокси",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Покреће уграђени Tailscale чвор у језгру и омогућава приступ уређајима у вашем tailnet-у преко локалног SOCKS5 проксија",
 	"tailscaleHostname": "Име чвора",

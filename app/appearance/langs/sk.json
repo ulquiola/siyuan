@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "Čakanie na odkaz na prihlásenie, skontrolujte sieť alebo proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Spúšťa vstavaný uzol Tailscale v jadre a sprístupňuje zariadenia vo vašom tailnete cez lokálnu proxy SOCKS5",
 	"tailscaleHostname": "Názov uzla",

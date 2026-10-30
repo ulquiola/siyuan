@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "ログインリンクを待機しています。ネットワークまたはプロキシを確認してください",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "カーネル内で Tailscale ノードを実行し、ローカルの SOCKS5 プロキシ経由で Tailnet 内のデバイスにアクセスします",
 	"tailscaleHostname": "ノード名",

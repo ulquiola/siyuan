@@ -1,4 +1,5 @@
 {
+	"tailscaleWaitingAuth": "Aguardando o link de login, verifique a rede ou o proxy",
 	"tailscale": "Tailscale",
 	"tailscaleTip": "Executa um nó Tailscale integrado ao kernel e acessa os dispositivos do seu tailnet pelo proxy SOCKS5 local",
 	"tailscaleHostname": "Nome do nó",
