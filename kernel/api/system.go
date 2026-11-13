@@ -6,6 +6,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -126,13 +127,27 @@ var getTailscale = contractHandler(apicontract.GetTailscale, func(c *gin.Context
 	return apicontract.Success(tailscaleData())
 })
 
-var getChangelog = contractHandler(apicontract.SystemGetChangelog, func(c *gin.Context, request apicontract.SystemChangelogRequest) (ret apicontract.Response[apicontract.SystemChangelogData]) {
-	ret = apicontract.Success(apicontract.SystemChangelogData{})
+var getReleaseChangelog = model.GetReleaseChangelog
 
-	force := request.Force
+var getChangelog = contractHandler(apicontract.SystemGetChangelog, func(c *gin.Context, request apicontract.SystemChangelogRequest) apicontract.Response[apicontract.SystemChangelogData] {
+	return loadChangelog(c.Request.Context(), request.Force, util.Ver)
+})
 
+func loadChangelog(ctx context.Context, force bool, version string) (ret apicontract.Response[apicontract.SystemChangelogData]) {
 	data := apicontract.SystemChangelogData{}
 	ret = apicontract.Success(data)
+
+	if !util.IsReleaseVer(version) {
+		if !force {
+			return
+		}
+		content, err := getReleaseChangelog(ctx, version)
+		if err != nil {
+			logging.LogWarnf("get changelog for v%s failed: %s", version, err)
+			return apicontract.Failure[apicontract.SystemChangelogData](-1, "release changelog is unavailable")
+		}
+		return apicontract.Success(apicontract.SystemChangelogData{Show: true, HTML: content, Version: version})
+	}
 
 	changelogsDir := filepath.Join(util.WorkingDir, "changelogs")
 	if !gulu.File.IsDir(changelogsDir) {
@@ -143,19 +158,13 @@ var getChangelog = contractHandler(apicontract.SystemGetChangelog, func(c *gin.C
 		return
 	}
 
-	if !force && !util.IsReleaseVer(util.Ver) {
-		model.Conf.ShowChangelog = false
-		model.Conf.Save()
-		return
-	}
-
-	changelogVer := util.Ver
+	changelogVer := version
 	changelogPath := getChangelogPath(changelogsDir, changelogVer)
 	if force && changelogPath == "" {
-		changelogVer, changelogPath = getLatestChangelog(changelogsDir, util.Ver)
+		changelogVer, changelogPath = getLatestChangelog(changelogsDir, version)
 	}
 	if changelogPath == "" {
-		logging.LogErrorf("changelog not found for v%s", util.Ver)
+		logging.LogErrorf("changelog not found for v%s", version)
 		return
 	}
 
@@ -178,7 +187,7 @@ var getChangelog = contractHandler(apicontract.SystemGetChangelog, func(c *gin.C
 	data.Version = changelogVer
 	ret = apicontract.Success(data)
 	return
-})
+}
 
 func getChangelogPath(changelogsDir, ver string) string {
 	verDir := filepath.Join(changelogsDir, "v"+ver)
@@ -567,6 +576,7 @@ var exportConf = contractHandler(apicontract.SystemExportConf, func(c *gin.Conte
 	if nil != clonedConf.AI.Load() {
 		if clonedConf.AI.Load().Web != nil {
 			clonedConf.AI.Load().Web.APIKey = ""
+			clonedConf.AI.Load().Web.ExaAPIKey = ""
 		}
 		for _, provider := range clonedConf.AI.Load().Providers {
 			if nil != provider {
@@ -799,8 +809,13 @@ func preserveImportedAISecrets(imported, current *conf.AI) {
 	if imported == nil || current == nil {
 		return
 	}
-	if imported.Web != nil && current.Web != nil && imported.Web.APIKey == "" {
-		imported.Web.APIKey = current.Web.APIKey
+	if imported.Web != nil && current.Web != nil {
+		if imported.Web.APIKey == "" {
+			imported.Web.APIKey = current.Web.APIKey
+		}
+		if imported.Web.ExaAPIKey == "" {
+			imported.Web.ExaAPIKey = current.Web.ExaAPIKey
+		}
 	}
 
 	currentProviders := map[string]*conf.Provider{}
@@ -972,7 +987,7 @@ var setAccessAuthCode = contractHandler(apicontract.SystemSetAccessAuthCode, fun
 	model.Conf.AccessAuthCode = aac
 	model.Conf.Save()
 
-	workspaceSession.AccessAuthCode = aac
+	model.SetAccessCodeSession(workspaceSession, aac)
 	session.Save(c)
 	go func() {
 		time.Sleep(200 * time.Millisecond)

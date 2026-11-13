@@ -1,6 +1,6 @@
 # SiYuan
 
-本仓库为 SiYuan 项目（内核 + 前端）的源码与部署辅助文件集合，基于上游 v3.8.9，并包含少量自用调整：
+本仓库为 SiYuan 项目（内核 + 前端）的源码与部署辅助文件集合，基于上游 v3.8.10，并包含少量自用调整：
 
 - 移除设置中的账户与订阅入口；
 - 第三方同步不依赖社区账号和付费校验；
@@ -8,7 +8,7 @@
 - 应用内的检查更新、自动下载安装包和下载链接都指向本仓库的 GitHub Releases；
 - Docker 构建适配国内网络与 amd64 原生编译。
 
-版本号跟随上游，当前为 `3.8.9`；推送 `v*` 标签会触发 `Release` 工作流，构建 Windows 与 macOS 安装包并创建 GitHub Release。
+版本号跟随上游，当前为 `3.8.10`；推送 `v*` 标签会触发 `Release` 工作流，构建 Windows 与 macOS 安装包并创建 GitHub Release。
 
 目录说明：
 
@@ -110,12 +110,12 @@ go build ./...
 
 ## 版本与发布
 
-版本号跟随上游，当前为 `3.8.9`。发布时在主仓库根目录创建并推送标签：
+版本号跟随上游，当前为 `3.8.10`。发布时在主仓库根目录创建并推送标签：
 
 ```shell
-git tag v3.8.9
-git push github v3.8.9
-git push origin v3.8.9
+git tag v3.8.10
+git push github v3.8.10
+git push origin v3.8.10
 ```
 
 推送标签后，`Release` 工作流会并行构建 Windows x64、macOS Intel 和 macOS Apple Silicon 三个安装包，并创建 GitHub Release。资产为：

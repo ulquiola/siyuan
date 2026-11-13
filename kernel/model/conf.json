@@ -1,0 +1,61 @@
+{
+  "logLevel": "debug",
+  "appearance": null,
+  "langs": null,
+  "lang": "",
+  "fileTree": null,
+  "tag": null,
+  "editor": null,
+  "export": null,
+  "graph": null,
+  "uiLayout": null,
+  "userData": "",
+  "readonly": false,
+  "serverAddrs": null,
+  "accessAuthCode": "",
+  "oidc": {
+    "enabled": false,
+    "provider": "custom",
+    "issuerURL": "",
+    "clientID": "",
+    "clientSecret": "",
+    "scopes": [
+      "openid",
+      "profile",
+      "email"
+    ],
+    "redirectURL": "",
+    "allowAll": false,
+    "claimRules": []
+  },
+  "system": null,
+  "keymap": null,
+  "sync": null,
+  "search": null,
+  "flashcard": null,
+  "ai": null,
+  "ocr": null,
+  "secrets": null,
+  "variables": null,
+  "bazaar": null,
+  "stat": null,
+  "api": null,
+  "repo": null,
+  "notebookCrypto": null,
+  "publish": {
+    "enable": true,
+    "port": 6808,
+    "auth": {
+      "enable": true,
+      "accounts": []
+    }
+  },
+  "onboarding": null,
+  "showChangelog": false,
+  "cloudRegion": 0,
+  "snippet": null,
+  "dataIndexState": 0,
+  "cookieKey": "",
+  "confVersion": 0,
+  "mcpOAuth": ""
+}
