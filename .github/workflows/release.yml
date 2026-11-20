@@ -4,10 +4,13 @@ on:
   push:
     tags:
       - "v*"
+    # 标签推送在本 fork 上不稳定触发，允许用 release/vX.Y.Z 分支手动发布
+    branches:
+      - "release/v*"
   workflow_dispatch:
     inputs:
       version:
-        description: "Version without the v prefix, for example 3.8.9"
+        description: "Version without the v prefix, for example 3.8.11"
         required: true
         type: string
 
@@ -30,9 +33,16 @@ jobs:
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             tag="v${{ inputs.version }}"
-          else
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             tag="${GITHUB_REF_NAME}"
+          else
+            # release/vX.Y.Z 分支：分支名去掉前缀即为标签名
+            tag="${GITHUB_REF_NAME#release/}"
           fi
+          case "$tag" in
+            v[0-9]*) ;;
+            *) echo "unexpected release ref: ${GITHUB_REF_NAME}" >&2; exit 1 ;;
+          esac
           echo "value=${tag}" >> "$GITHUB_OUTPUT"
           echo "release tag: ${tag}"
 
