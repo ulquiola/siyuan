@@ -49,7 +49,7 @@ RUN <<EORUN
 #!/bin/sh -e
 # 替换 Alpine 源为阿里云镜像
 sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories
-apk add --no-cache ca-certificates wget xz
+apk add --no-cache ca-certificates wget xz gcc musl-dev
 # 安装 musl 交叉编译工具链：musl 生成可在 Alpine 运行的目标架构二进制
 MUSL_ARCH=""
 MUSL_SHA256=""
@@ -58,28 +58,35 @@ case "$SIYUAN_TARGETARCH" in
   arm64) MUSL_ARCH="aarch64-linux-musl"; MUSL_SHA256="c909817856d6ceda86aa510894fa3527eac7989f0ef6e87b5721c58737a06c38" ;;
   *) echo "unsupported TARGETARCH: $SIYUAN_TARGETARCH"; exit 1 ;;
 esac
-wget -q -t 3 -O /tmp/musl-cross.tgz "https://github.com/musl-cc/musl.cc/releases/download/v0.0.1/${MUSL_ARCH}-cross.tgz"
-echo "${MUSL_SHA256}  /tmp/musl-cross.tgz" > /tmp/musl-cross.sha256
-sha256sum -c /tmp/musl-cross.sha256
-tar -xzf /tmp/musl-cross.tgz -C /opt
-ln -s /opt/${MUSL_ARCH}-cross/bin/${MUSL_ARCH}-gcc /usr/local/bin/${MUSL_ARCH}-gcc
+# musl.cc 的交叉工具链只能在 x86_64 上运行；构建机架构与目标一致时直接用原生 gcc
+# apk --print-arch 的架构名（x86_64/aarch64）与 musl 前缀一致，与 TARGETARCH（amd64/arm64）不同
+if [ "$(apk --print-arch)" = "${MUSL_ARCH%-linux-musl}" ]; then
+  CC=gcc
+else
+  wget -q -t 3 -O /tmp/musl-cross.tgz "https://github.com/musl-cc/musl.cc/releases/download/v0.0.1/${MUSL_ARCH}-cross.tgz"
+  echo "${MUSL_SHA256}  /tmp/musl-cross.tgz" > /tmp/musl-cross.sha256
+  sha256sum -c /tmp/musl-cross.sha256
+  tar -xzf /tmp/musl-cross.tgz -C /opt
+  ln -s /opt/${MUSL_ARCH}-cross/bin/${MUSL_ARCH}-gcc /usr/local/bin/${MUSL_ARCH}-gcc
+  CC=${MUSL_ARCH}-gcc
+fi
 go env -w GO111MODULE=on
 go env -w CGO_ENABLED=1
 go env -w GOOS=linux
 go env -w GOARCH=$SIYUAN_TARGETARCH
-go env -w CC=${MUSL_ARCH}-gcc
+go env -w CC=$CC
 EORUN
 
 WORKDIR /kernel
 ADD kernel/go.* .
 RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg \
-    GOPROXY=https://mirrors.aliyun.com/goproxy/,https://goproxy.cn,direct \
-    GOSUMDB=sum.golang.google.cn GOGC=off GOFLAGS=-mod=mod go mod download
+    GOPROXY=https://goproxy.cn,direct \
+    GOSUMDB=sum.golang.google.cn GOGC=50 GOMEMLIMIT=6GiB GOFLAGS=-mod=mod go mod download
 
 ADD kernel/ .
 FROM go-source AS go-build
-RUN --mount=type=cache,target=/root/.cache/go-build \
-    GOGC=off GOFLAGS=-mod=mod go build -p 1 -tags "fts5 sqlcipher" -ldflags "-s -w"
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg \
+    GOPROXY=https://goproxy.cn,direct GOGC=50 GOMEMLIMIT=6GiB GOFLAGS=-mod=mod go build -p 1 -tags "fts5 sqlcipher" -ldflags "-s -w"
 
 FROM --platform=$BUILDPLATFORM ${ALPINE_IMAGE} AS onnx-source
 ARG ONNX_COMMIT=3a728b75062256951b6e19ce718907cf1a1d4cf0
@@ -175,7 +182,8 @@ FROM ${ONNX_IMAGE} AS onnx-runtime
 
 FROM go-source AS ocr-build
 ARG TARGETARCH
-RUN --mount=type=cache,target=/root/.cache/go-build \
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg \
+    GOPROXY=https://goproxy.cn,direct GOSUMDB=off GOGC=50 GOMEMLIMIT=6GiB GOFLAGS=-mod=mod \
     mkdir -p /ocr/linux-${TARGETARCH} \
     && go build -trimpath -ldflags "-s -w" -o /ocr/linux-${TARGETARCH}/siyuan-ocr ./ocr/cmd/ocr-worker
 COPY --from=onnx-runtime /onnx-artifacts/ /ocr/linux-${TARGETARCH}/
