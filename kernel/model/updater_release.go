@@ -11,7 +11,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -65,6 +67,7 @@ var (
 	githubReleasesLock      sync.RWMutex
 	githubReleasesFlight    singleflight.Group
 	githubManifestCache     sync.Map
+	updateReleaseURLs       sync.Map
 )
 
 // getUpdateRelease 从本仓库的 GitHub Releases 中选择当前更新通道对应的最新版本。
@@ -76,7 +79,32 @@ func getUpdateRelease(force bool) (*updateRelease, error) {
 	if !isValidUpdateChannel(channel) {
 		return nil, errors.New("update channel is invalid")
 	}
-	return getGitHubUpdateRelease(channel, force)
+	// 正式版同样取本仓库的 GitHub Releases，避免回落到上游云端版本
+	release, err := getGitHubUpdateRelease(channel, force)
+	if err == nil {
+		rememberUpdateReleaseURL(release)
+	}
+	return release, err
+}
+
+func rememberUpdateReleaseURL(release *updateRelease) {
+	version := normalizeReleaseVersion(release.Version)
+	parsed, err := url.Parse(release.ReleaseURL)
+	if semver.IsValid(version) && err == nil && parsed.Host != "" && (parsed.Scheme == "https" || parsed.Scheme == "http") {
+		updateReleaseURLs.Store(version, release.ReleaseURL)
+	}
+}
+
+func GetInstallPackageReleaseURL(installPkgPath string) string {
+	version := installPackageVersion(filepath.Base(installPkgPath))
+	if version == "" {
+		return ""
+	}
+	if releaseURL, ok := updateReleaseURLs.Load(version); ok {
+		return releaseURL.(string)
+	}
+	// 重启后可能尚未检查更新，按待安装包版本定位公告，退出流程不发起网络请求。
+	return githubReleaseURLPrefix + strings.TrimPrefix(version, "v")
 }
 
 // getUpdatePackageURLs 只返回本仓库的发布资产地址，避免回落到上游镜像下载到错误的安装包。

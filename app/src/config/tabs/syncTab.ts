@@ -1,5 +1,5 @@
-import {mobileInputDialog} from "../../dialog/mobileInputDialog";
-import {mobileConfirmDialog} from "../../dialog/mobileConfirmDialog";
+import {openInputDialog} from "../../dialog/inputDialog";
+import {confirmDialog} from "../../dialog/confirmDialog";
 import type {SettingTabBuilder} from "../setting/builder";
 import {Constants} from "../../constants";
 import {fetchPost, fetchSyncPost} from "../../util/fetch";
@@ -238,8 +238,12 @@ const registerRepoGroup = (tab: SettingTabBuilder) => {
         ],
         afterMount: (root) => {
             root.querySelector("#purgeRepo")?.addEventListener("click", () => {
-                mobileConfirmDialog("♻️ " + window.siyuan.languages.dataRepoPurge, window.siyuan.languages.dataRepoPurgeConfirm, () => {
-                    fetchPost("/api/repo/purgeRepo");
+                confirmDialog({
+                    title: "♻️ " + window.siyuan.languages.dataRepoPurge,
+                    text: window.siyuan.languages.dataRepoPurgeConfirm,
+                    confirm: () => {
+                        fetchPost("/api/repo/purgeRepo");
+                    },
                 });
             });
         },
@@ -279,8 +283,12 @@ const registerRepoGroup = (tab: SettingTabBuilder) => {
 </div>`,
         afterMount: (root) => {
             root.querySelector("#purgeCloudData")?.addEventListener("click", () => {
-                mobileConfirmDialog("♻️ " + window.siyuan.languages.cloudStoragePurge, `<div class="b3-typography">${window.siyuan.languages.cloudStoragePurgeConfirm}</div>`, () => {
-                    fetchPost("/api/repo/purgeCloudRepo");
+                confirmDialog({
+                    title: "♻️ " + window.siyuan.languages.cloudStoragePurge,
+                    text: `<div class="b3-typography">${window.siyuan.languages.cloudStoragePurgeConfirm}</div>`,
+                    confirm: () => {
+                        fetchPost("/api/repo/purgeCloudRepo");
+                    },
                 });
             });
         },
@@ -297,7 +305,7 @@ const mountRepoKey = (root: HTMLElement) => {
     };
     toggleRepoKeyActions();
     root.querySelector("#importKey")?.addEventListener("click", () => {
-        const passwordDialog = mobileInputDialog({
+        const passwordDialog = openInputDialog({
             awaitConfirm: true,
             title: "🔑 " + window.siyuan.languages.key,
             value: "",
@@ -314,11 +322,15 @@ const mountRepoKey = (root: HTMLElement) => {
         passwordDialog.element.setAttribute("data-key", Constants.DIALOG_PASSWORD);
     });
     root.querySelector("#initKey")?.addEventListener("click", () => {
-        mobileConfirmDialog("🔑 " + window.siyuan.languages.genKey, window.siyuan.languages.initRepoKeyTip, () => {
-            fetchPost("/api/repo/initRepoKey", {}, (response) => {
-                window.siyuan.config.repo.key = response.data.key;
-                toggleRepoKeyActions();
-            });
+        confirmDialog({
+            title: "🔑 " + window.siyuan.languages.genKey,
+            text: window.siyuan.languages.initRepoKeyTip,
+            confirm: () => {
+                fetchPost("/api/repo/initRepoKey", {}, (response) => {
+                    window.siyuan.config.repo.key = response.data.key;
+                    toggleRepoKeyActions();
+                });
+            },
         });
     });
     root.querySelector("#initKeyByPW")?.addEventListener("click", () => {
@@ -331,13 +343,17 @@ const mountRepoKey = (root: HTMLElement) => {
         showMessage(window.siyuan.languages.copied);
     });
     root.querySelector("#resetRepo")?.addEventListener("click", () => {
-        mobileConfirmDialog("⚠️ " + window.siyuan.languages.resetRepo, window.siyuan.languages.resetRepoTip, () => {
-            fetchPost("/api/repo/resetRepo", {}, () => {
-                window.siyuan.config.repo.key = "";
-                window.siyuan.config.sync.enabled = false;
-                processSync();
-                toggleRepoKeyActions();
-            });
+        confirmDialog({
+            title: "⚠️ " + window.siyuan.languages.resetRepo,
+            text: window.siyuan.languages.resetRepoTip,
+            confirm: () => {
+                fetchPost("/api/repo/resetRepo", {}, () => {
+                    window.siyuan.config.repo.key = "";
+                    window.siyuan.config.sync.enabled = false;
+                    processSync();
+                    toggleRepoKeyActions();
+                });
+            },
         });
     });
 };
