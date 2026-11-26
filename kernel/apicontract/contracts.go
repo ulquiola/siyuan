@@ -318,6 +318,9 @@ var (
 	// 读取失败或扫描超时返回 code=-1、data=null；调用方应保留旧结果的时间标记，并允许用户重试。
 	GetWorkspaceStorage = define[EmptyRequest, WorkspaceStorageData]("getWorkspaceStorage", "/api/system/getWorkspaceStorage", AuthenticatedAccess|AdminAccess, NoBody, ResponseOptions{}, "POST")
 	GetNetwork          = define[EmptyRequest, NetworkData]("getNetwork", "/api/system/getNetwork", AuthenticatedAccess|AdminAccess, NoBody, ResponseOptions{}, "POST")
+	// 读取内嵌 Tailscale 节点的配置和运行状态。配置文件不存在时返回默认配置和 disabled 状态。
+	// 不会返回已保存的 authKey，只用 authKeySaved 表示是否已经保存；状态中的 authURL 在需要登录时给出认证地址。
+	GetTailscale = define[EmptyRequest, TailscaleData]("getTailscale", "/api/system/getTailscale", AuthenticatedAccess|AdminAccess, NoBody, ResponseOptions{}, "POST")
 	// 无需请求体，要求管理员权限并允许只读模式，返回 {text} 诊断摘要：内核版本、运行时、操作系统、
 	// 逻辑 CPU 数量、当前系统与进程内存，以及检测到的工作空间存储类型。
 	// 无法探测的内存或存储返回 unknown，不把移动端存储推断为 SSD；文本不含工作空间路径、主机名和账户标识。
@@ -342,6 +345,10 @@ var (
 	SetNetworkServeTLS = define[NetworkServeTLSRequest, Null]("setNetworkServeTLS", "/api/system/setNetworkServeTLS", AuthenticatedAccess|AdminAccess|WritableAccess, JSONBody, ResponseOptions{Setting: SettingWrite{Namespace: "system"}}, "POST")
 	SetUpdateChannel   = define[UpdateChannelRequest, Null]("setUpdateChannel", "/api/system/setUpdateChannel", AuthenticatedAccess|AdminAccess|WritableAccess, JSONBody, ResponseOptions{Setting: SettingWrite{Namespace: "system"}}, "POST")
 	SetNetworkProxy    = define[NetworkProxy, Null]("setNetworkProxy", "/api/system/setNetworkProxy", AuthenticatedAccess|AdminAccess|WritableAccess, JSONBody, ResponseOptions{Setting: SettingWrite{Namespace: "system"}}, "POST")
+	// 保存内嵌 Tailscale 配置并异步重建节点，监听地址仅允许回环地址，校验失败返回 code=-1。
+	// authKey 为空表示沿用已保存的密钥，clearAuthKey 为 true 时删除已保存的密钥；
+	// 返回保存后的配置和当前状态，节点重建在后台完成，调用方应继续轮询 getTailscale。
+	SetTailscale       = define[TailscaleConfigRequest, TailscaleData]("setTailscale", "/api/system/setTailscale", AuthenticatedAccess|AdminAccess|WritableAccess, JSONBody, ResponseOptions{}, "POST")
 	GetBookmarkLabels  = define[EmptyRequest, []string]("getBookmarkLabels", "/api/attr/getBookmarkLabels", AuthenticatedAccess, NoBody, ResponseOptions{}, "POST")
 	BatchGetBlockAttrs = define[BlockIDsRequest, map[string]map[string]string]("batchGetBlockAttrs", "/api/attr/batchGetBlockAttrs", AuthenticatedAccess, JSONBody, ResponseOptions{NonNullable: true}, "POST")
 	// 发布只读会话只解析有权访问的数据库名称，且不读取资源的 OCR 文本。

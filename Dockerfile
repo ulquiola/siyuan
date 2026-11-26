@@ -23,6 +23,8 @@ COPY kernel/av/lunar_calendar_data.json /kernel/av/lunar_calendar_data.json
 ADD scripts/prepare-ocr.py scripts/ocr-assets.json /scripts/
 RUN <<EORUN
 #!/bin/bash -e
+# 替换 Debian 源为阿里云镜像
+sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
 apt-get update
 apt-get install -y --no-install-recommends python3
 python3 /scripts/prepare-ocr.py
@@ -33,28 +35,64 @@ mv appearance stage guide /artifacts/
 if [ -d changelogs ]; then mv changelogs /artifacts/; fi
 EORUN
 
-FROM ${GO_IMAGE} AS go-source
+# go-build 阶段使用 BUILDPLATFORM 原生编译，再交叉编译到 TARGETARCH，完全避开 QEMU 模拟，
+# 解决 Go 1.26 编译器在 QEMU 下段错误的问题
+FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS go-source
+
+# 目标架构（由 buildx 自动设置：amd64、arm64 等）
+ARG TARGETARCH=amd64
+ARG BUILDPLATFORM
+# 预定义 ARG 经 ENV 固化后进入层缓存键，避免不同架构的本地构建互相复用同一层
+ENV SIYUAN_TARGETARCH=${TARGETARCH}
 
 RUN <<EORUN
 #!/bin/sh -e
-apk add --no-cache gcc musl-dev
+# 替换 Alpine 源为阿里云镜像
+sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories
+apk add --no-cache ca-certificates wget xz gcc musl-dev
+# 安装 musl 交叉编译工具链：musl 生成可在 Alpine 运行的目标架构二进制
+MUSL_ARCH=""
+MUSL_SHA256=""
+case "$SIYUAN_TARGETARCH" in
+  amd64) MUSL_ARCH="x86_64-linux-musl"; MUSL_SHA256="c5d410d9f82a4f24c549fe5d24f988f85b2679b452413a9f7e5f7b956f2fe7ea" ;;
+  arm64) MUSL_ARCH="aarch64-linux-musl"; MUSL_SHA256="c909817856d6ceda86aa510894fa3527eac7989f0ef6e87b5721c58737a06c38" ;;
+  *) echo "unsupported TARGETARCH: $SIYUAN_TARGETARCH"; exit 1 ;;
+esac
+# musl.cc 的交叉工具链只能在 x86_64 上运行；构建机架构与目标一致时直接用原生 gcc
+# apk --print-arch 的架构名（x86_64/aarch64）与 musl 前缀一致，与 TARGETARCH（amd64/arm64）不同
+if [ "$(apk --print-arch)" = "${MUSL_ARCH%-linux-musl}" ]; then
+  CC=gcc
+else
+  wget -q -t 3 -O /tmp/musl-cross.tgz "https://github.com/musl-cc/musl.cc/releases/download/v0.0.1/${MUSL_ARCH}-cross.tgz"
+  echo "${MUSL_SHA256}  /tmp/musl-cross.tgz" > /tmp/musl-cross.sha256
+  sha256sum -c /tmp/musl-cross.sha256
+  tar -xzf /tmp/musl-cross.tgz -C /opt
+  ln -s /opt/${MUSL_ARCH}-cross/bin/${MUSL_ARCH}-gcc /usr/local/bin/${MUSL_ARCH}-gcc
+  CC=${MUSL_ARCH}-gcc
+fi
 go env -w GO111MODULE=on
 go env -w CGO_ENABLED=1
+go env -w GOOS=linux
+go env -w GOARCH=$SIYUAN_TARGETARCH
+go env -w CC=$CC
 EORUN
 
 WORKDIR /kernel
 ADD kernel/go.* .
-RUN go mod download
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg \
+    GOPROXY=https://goproxy.cn,direct \
+    GOSUMDB=sum.golang.google.cn GOGC=50 GOMEMLIMIT=6GiB GOFLAGS=-mod=mod go mod download
 
 ADD kernel/ .
 FROM go-source AS go-build
-RUN --mount=type=cache,target=/root/.cache/go-build \
-    go build -tags "fts5 sqlcipher" -ldflags "-s -w"
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg \
+    GOPROXY=https://goproxy.cn,direct GOGC=50 GOMEMLIMIT=6GiB GOFLAGS=-mod=mod go build -p 1 -tags "fts5 sqlcipher" -ldflags "-s -w"
 
 FROM --platform=$BUILDPLATFORM ${ALPINE_IMAGE} AS onnx-source
 ARG ONNX_COMMIT=3a728b75062256951b6e19ce718907cf1a1d4cf0
 ARG ONNX_VERSION
-RUN apk add --no-cache git
+RUN sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories \
+    && apk add --no-cache git
 # 固定提交的源码在构建机上下载一次，网络中断时重试；子模块保持各自锁定的提交。
 RUN <<EORUN
 #!/bin/sh -e
@@ -89,6 +127,7 @@ ARG TARGETPLATFORM
 ARG ONNX_TOOLCHAIN_REV=2
 # ONNX 阶段只依赖 C++ 工具链和固定源码；更新工具链时递增修订号以刷新安装层。
 RUN echo "${TARGETPLATFORM} toolchain revision ${ONNX_TOOLCHAIN_REV}" \
+    && sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories \
     && apk add --no-cache bash cmake make g++ git patch python3 py3-pip py3-packaging linux-headers \
     && apk info -v | sort > /onnx-toolchain.txt
 
@@ -99,6 +138,7 @@ FROM --platform=$BUILDPLATFORM ${ALPINE_IMAGE} AS onnx-toolchain-arm
 ARG TARGETPLATFORM
 ARG ONNX_TOOLCHAIN_REV=2
 RUN echo "${TARGETPLATFORM} toolchain revision ${ONNX_TOOLCHAIN_REV}" \
+    && sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories \
     && apk add --no-cache bash cmake make g++ clang lld git patch python3 py3-pip py3-packaging linux-headers \
     && apk info -v | sort > /onnx-toolchain.txt
 
@@ -142,20 +182,24 @@ FROM ${ONNX_IMAGE} AS onnx-runtime
 
 FROM go-source AS ocr-build
 ARG TARGETARCH
-RUN --mount=type=cache,target=/root/.cache/go-build \
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg \
+    GOPROXY=https://goproxy.cn,direct GOSUMDB=off GOGC=50 GOMEMLIMIT=6GiB GOFLAGS=-mod=mod \
     mkdir -p /ocr/linux-${TARGETARCH} \
     && go build -trimpath -ldflags "-s -w" -o /ocr/linux-${TARGETARCH}/siyuan-ocr ./ocr/cmd/ocr-worker
 COPY --from=onnx-runtime /onnx-artifacts/ /ocr/linux-${TARGETARCH}/
 
 FROM ${ALPINE_IMAGE}
 LABEL maintainer="Liang Ding<845765@qq.com>"
+LABEL modifier="ulquiola@163.com"
 
-RUN apk add --no-cache 'ca-certificates>=20261020-r0' tzdata su-exec libstdc++
+RUN sed -i "s|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g" /etc/apk/repositories \
+    && apk add --no-cache 'ca-certificates>=20261020-r0' tzdata su-exec libstdc++
 
 ENV TZ=Asia/Shanghai
 ENV HOME=/home/siyuan
 ENV RUN_IN_CONTAINER=true
 EXPOSE 6806
+VOLUME /siyuan/workspace
 
 WORKDIR /opt/siyuan/
 COPY --from=go-build --chmod=755 /kernel/kernel /kernel/entrypoint.sh .

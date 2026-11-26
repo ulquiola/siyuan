@@ -102,33 +102,6 @@ func TestInstallPackageMainlandAnnouncementSurvivesRestart(t *testing.T) {
 	}
 }
 
-func TestInstallPackageUsesLocalizedReleaseAnnouncement(t *testing.T) {
-	previousConf := Conf
-	Conf = NewAppConf()
-	t.Cleanup(func() {
-		Conf = previousConf
-		updateReleaseURLs.Delete("v99.7.0")
-	})
-	result := map[string]any{
-		"release":        "https://example.invalid/default",
-		"release_zh-CN":  "https://ld246.com/article/123",
-		"release_en":     "https://liuyun.io/article/456",
-		"release_zh_CHT": "https://liuyun.io/article/789",
-	}
-	for _, test := range []struct{ lang, want string }{
-		{"zh-CN", "https://ld246.com/article/123"},
-		{"en", "https://liuyun.io/article/456"},
-		{"zh-TW", "https://liuyun.io/article/789"},
-		{"ja", "https://example.invalid/default"},
-	} {
-		Conf.Lang = test.lang
-		rememberUpdateReleaseURL(&updateRelease{Version: "99.7.0", ReleaseURL: getStableReleaseURL(result, "99.7.0")})
-		if got := GetInstallPackageReleaseURL("siyuan-99.7.0-win.exe"); got != test.want {
-			t.Fatalf("locale %q: got %q, want %q", test.lang, got, test.want)
-		}
-	}
-}
-
 func TestPrereleaseInstallerUsesGitHubAnnouncement(t *testing.T) {
 	previousConf := Conf
 	Conf = NewAppConf()

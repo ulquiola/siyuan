@@ -4,7 +4,6 @@ import {fetchSyncPost} from "../../util/fetch";
 import {escapeHtml} from "../../util/escape";
 import {processSync} from "../../dialog/processSystem";
 import {progressLoading} from "../../dialog/progress";
-import {updateAccountPanelVisibility} from "./accountUi";
 import {hideMessage, showMessage} from "../../dialog/message";
 import {refreshSyncCloudDirBlock} from "../../sync/syncGuide";
 import {
@@ -119,7 +118,6 @@ export const clearSyncTabElement = (root?: HTMLElement) => {
 export const mountSyncTabExtras = (root: HTMLElement) => {
     syncTabElement = root;
     refreshSyncTabPanels(root);
-    updateAccountPanelVisibility(root);
 };
 
 export const refreshLANSyncStatus = (root: Element) => {

@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
@@ -15,7 +16,9 @@ class MarkdownNoticesTests(unittest.TestCase):
         updated = notices.update_markdown_notices(existing, section)
         self.assertTrue(updated.startswith(existing))
         self.assertEqual(notices.update_markdown_notices(updated, section), updated)
-        for required in ("vditor 4.0.2-alpha.1", "diff-match-patch 1.0.5", "SIL OPEN FONT LICENSE",
+        # vditor 版本随 app/package.json 的锁定值变化，断言从依赖声明读取，避免锁定值升级后测试过期
+        vditor_version = json.loads((notices.REPO_ROOT / "app" / "package.json").read_text(encoding="utf-8"))["devDependencies"]["vditor"]
+        for required in (f"vditor {vditor_version}", "diff-match-patch 1.0.5", "SIL OPEN FONT LICENSE",
                          "MathJax Consortium", "Copyright (c) 2009-2010, Design Science"):
             self.assertIn(required, updated)
 

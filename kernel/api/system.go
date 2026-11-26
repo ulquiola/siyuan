@@ -29,6 +29,7 @@ import (
 	"github.com/siyuan-note/siyuan/kernel/apicontract"
 	"github.com/siyuan-note/siyuan/kernel/conf"
 	"github.com/siyuan-note/siyuan/kernel/model"
+	"github.com/siyuan-note/siyuan/kernel/tailscale"
 	"github.com/siyuan-note/siyuan/kernel/util"
 	"golang.org/x/mod/semver"
 )
@@ -82,6 +83,48 @@ var getNetwork = contractHandler(apicontract.GetNetwork, func(c *gin.Context, re
 		proxy = &apicontract.NetworkProxy{Scheme: value.Scheme, Host: value.Host, Port: value.Port}
 	}
 	return apicontract.Success(apicontract.NetworkData{Proxy: proxy})
+})
+
+// tailscaleData 汇总内嵌 Tailscale 的配置和状态；配置文件缺失时给出默认值，解析失败时把原因放进状态。
+func tailscaleData() apicontract.TailscaleData {
+	configDir := tailscale.ConfigDir()
+	config, err := tailscale.LoadConfig(configDir)
+	if nil == config {
+		config = tailscale.NewConfig(configDir)
+	}
+	status := tailscale.StatusFor(config)
+	if nil != err {
+		// 配置解析失败时只覆写状态和原因，保留已缓存的登录链接与地址
+		status.State = "error"
+		status.Error = tailscaleErrorMessage("tailscaleConfigError", err)
+	}
+	return apicontract.TailscaleData{
+		Config: apicontract.TailscaleConfig{
+			Enabled:      config.IsEnabled(),
+			Hostname:     config.Hostname,
+			AuthKeySaved: "" != config.AuthKey,
+			Listen:       config.Listen,
+		},
+		Status: apicontract.TailscaleStatus{
+			State:   status.State,
+			AuthURL: status.AuthURL,
+			IPs:     status.IPs,
+			Error:   status.Error,
+		},
+	}
+}
+
+// tailscaleErrorMessage 给 Tailscale 错误加上本地化的类别说明，技术细节保持原文。
+func tailscaleErrorMessage(key string, err error) string {
+	prefix := util.I18nTerm(model.Conf.Lang, key)
+	if "" == prefix {
+		prefix = "Tailscale configuration error"
+	}
+	return prefix + ": " + err.Error()
+}
+
+var getTailscale = contractHandler(apicontract.GetTailscale, func(c *gin.Context, request apicontract.EmptyRequest) apicontract.Response[apicontract.TailscaleData] {
+	return apicontract.Success(tailscaleData())
 })
 
 var getReleaseChangelog = model.GetReleaseChangelog
@@ -1386,6 +1429,21 @@ var setNetworkProxy = contractHandler(apicontract.SetNetworkProxy, func(c *gin.C
 	})
 	util.PushMsg(model.Conf.Language(102), 3000)
 	return apicontract.Success(apicontract.Null{})
+})
+
+var setTailscale = contractHandler(apicontract.SetTailscale, func(c *gin.Context, request apicontract.TailscaleConfigRequest) apicontract.Response[apicontract.TailscaleData] {
+	enabled := request.Enabled
+	config := &tailscale.Config{
+		Enabled:      &enabled,
+		Hostname:     request.Hostname,
+		AuthKey:      request.AuthKey,
+		ClearAuthKey: request.ClearAuthKey,
+		Listen:       request.Listen,
+	}
+	if err := tailscale.SaveConfig(tailscale.ConfigDir(), config); nil != err {
+		return apicontract.Failure[apicontract.TailscaleData](-1, tailscaleErrorMessage("tailscaleConfigError", err))
+	}
+	return apicontract.Success(tailscaleData())
 })
 
 var addUIProcess = contractHandler(apicontract.SystemAddUIProcess, func(c *gin.Context, request apicontract.EmptyRequest) apicontract.Response[apicontract.Null] {

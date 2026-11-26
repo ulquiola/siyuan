@@ -99,12 +99,13 @@ func validateAssetDownloadSourceScope(scope string) error {
 func checkAssetDownloadAccess() error {
 	confSyncSnapshot := Conf.LoadSync()
 
-	if confSyncSnapshot == nil || !confSyncSnapshot.Enabled || Conf.GetUser() == nil {
+	if confSyncSnapshot == nil || !confSyncSnapshot.Enabled {
 		return errors.New(Conf.Language(376))
 	}
 	switch confSyncSnapshot.Provider {
 	case conf.ProviderSiYuan:
-		if !IsSubscriber() {
+		// 仅官方云端同步依赖社区账号，第三方同步无需登录
+		if nil == Conf.GetUser() || !IsSubscriber() {
 			return errors.New(Conf.Language(376))
 		}
 	case conf.ProviderS3, conf.ProviderWebDAV, conf.ProviderLocal:

@@ -578,6 +578,23 @@ type ILanguages = {[key: string]: string} & {
     _trayMenu?: {[key: string]: string};
     _attrView?: {[key: string]: string};
     _kernel?: {[key: number]: string};
+    // 自用 fork 新增的内嵌 Tailscale 设置文案
+    tailscale?: string;
+    tailscaleTip?: string;
+    tailscaleHostname?: string;
+    tailscaleAuthKey?: string;
+    tailscaleAuthKeySaved?: string;
+    tailscaleClearAuthKey?: string;
+    tailscaleListen?: string;
+    tailscaleDisabled?: string;
+    tailscaleStarting?: string;
+    tailscaleNeedsLogin?: string;
+    tailscaleWaitingAuth?: string;
+    tailscaleOpenLogin?: string;
+    tailscaleRunning?: string;
+    tailscaleError?: string;
+    tailscaleConfigError?: string;
+    tailscaleStartError?: string;
 };
 
 interface ISiyuan {

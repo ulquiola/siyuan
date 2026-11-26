@@ -13,46 +13,17 @@ import (
 	"time"
 
 	"github.com/siyuan-note/siyuan/kernel/conf"
-	"github.com/siyuan-note/siyuan/kernel/util"
 )
 
 func TestGetUpdatePackageURLs(t *testing.T) {
-	originalRegion := util.CurrentCloudRegion
-	t.Cleanup(func() { util.CurrentCloudRegion = originalRegion })
-	for _, region := range []int{0, 1} {
-		util.CurrentCloudRegion = region
-		for _, version := range []string{"3.8.7", "3.8.7-rc.1", "3.8.7-beta.4", "3.8.7-alpha.9"} {
-			for _, suffix := range []string{"win.exe", "win-arm64.exe", "mac.dmg", "mac-arm64.dmg"} {
-				pkgName := "siyuan-" + version + "-" + suffix
-				githubURL := "https://github.com/siyuan-note/siyuan/releases/download/v" + version + "/" + pkgName
-				want := []string{
-					"https://release.b3log.org/siyuan/" + pkgName,
-					"https://release.liuyun.io/siyuan/" + pkgName,
-					githubURL,
-				}
-				if got := getUpdatePackageURLs(pkgName, githubURL); !slices.Equal(got, want) {
-					t.Fatalf("region [%d] version [%s] package [%s]: got %v, want %v", region, version, pkgName, got, want)
-				}
-			}
-		}
+	const assetURL = "https://github.com/ulquiola/siyuan/releases/download/v3.8.9/siyuan-3.8.9-win.exe"
+	if got := getUpdatePackageURLs(assetURL); !slices.Equal(got, []string{assetURL}) {
+		t.Fatalf("got %v, want [%s]", got, assetURL)
 	}
 }
 
-func TestGetUpdatePackageURLsPreservesReleaseAssetURL(t *testing.T) {
-	const pkgName = "siyuan-3.8.7-alpha.9-win.exe"
-	const githubURL = "https://github.com/siyuan-note/siyuan/releases/download/custom-tag/" + pkgName
-	want := []string{
-		"https://release.b3log.org/siyuan/" + pkgName,
-		"https://release.liuyun.io/siyuan/" + pkgName,
-		githubURL,
-	}
-	if got := getUpdatePackageURLs(pkgName, githubURL); !slices.Equal(got, want) {
-		t.Fatalf("got %v, want %v", got, want)
-	}
-}
-
-// Beta 和 Alpha 通道同样使用全部下载源，保证并发探测对三个通道一致生效。
-func TestGitHubUpdateReleaseUsesAllSourcesForBetaAndAlpha(t *testing.T) {
+// Beta 和 Alpha 通道同样只使用本仓库的发布资产，不再回落到上游镜像。
+func TestGitHubUpdateReleaseUsesForkAssetForBetaAndAlpha(t *testing.T) {
 	suffix := currentInstallPackageSuffix()
 	if "" == suffix {
 		t.Skip("automatic installation is desktop-only")
@@ -69,7 +40,7 @@ func TestGitHubUpdateReleaseUsesAllSourcesForBetaAndAlpha(t *testing.T) {
 		pkgName := "siyuan-" + version + "-" + suffix
 		releases = append(releases, &githubRelease{TagName: tag, HTMLURL: "https://example.invalid/" + version,
 			Assets: []*githubReleaseAsset{{
-				Name: pkgName, BrowserDownloadURL: "https://github.com/siyuan-note/siyuan/releases/download/" + tag + "/" + pkgName,
+				Name: pkgName, BrowserDownloadURL: "https://github.com/ulquiola/siyuan/releases/download/" + tag + "/" + pkgName,
 				Digest: "sha256:" + checksum, State: "uploaded",
 			}}})
 	}
@@ -95,9 +66,7 @@ func TestGitHubUpdateReleaseUsesAllSourcesForBetaAndAlpha(t *testing.T) {
 			t.Fatalf("channel [%s] has no package [%s]", channel, pkgName)
 		}
 		want := []string{
-			"https://release.b3log.org/siyuan/" + pkgName,
-			"https://release.liuyun.io/siyuan/" + pkgName,
-			"https://github.com/siyuan-note/siyuan/releases/download/" + tag + "/" + pkgName,
+			"https://github.com/ulquiola/siyuan/releases/download/" + tag + "/" + pkgName,
 		}
 		if !slices.Equal(pkg.URLs, want) {
 			t.Fatalf("channel [%s]: got %v, want %v", channel, pkg.URLs, want)

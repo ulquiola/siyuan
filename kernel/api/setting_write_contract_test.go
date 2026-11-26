@@ -27,6 +27,7 @@ var settingWriteExemptions = map[string]string{
 	"/api/setting/login2faCloudUser":           "账号登录，用户数据不属于设置项",
 	"/api/setting/refreshVirtualBlockRef":      "仅刷新运行时缓存",
 	"/api/system/setWorkspaceDir":              "写入全局工作空间列表，不属于工作空间配置",
+	"/api/system/setTailscale":                 "写入独立的 Tailscale 配置文件，不修改应用配置",
 	"/api/system/importCustomFont":             "写入字体资源文件，不修改配置",
 	"/api/system/importTLSCABundle":            "写入证书文件，不修改配置",
 	"/api/system/addCustomEmoji":               "写入表情资源文件，不修改配置",

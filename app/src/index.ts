@@ -17,7 +17,7 @@ import {Model} from "./layout/Model";
 import {loadDesktopHostConnection, onGetConfig} from "./boot/onGetConfig";
 import {exitAfterSettingsReset} from "./config/setting/reset";
 import {initBlockPopover} from "./block/popover";
-import {applyCloudUserState, onSetaccount} from "./config/tabs/accountUi";
+import {applyCloudUserState} from "./config/tabs/accountUi";
 import {addScript} from "./protyle/util/addScript";
 import {ensureLute} from "./protyle/util/lute";
 import {genUUID} from "./util/genID";
@@ -46,7 +46,7 @@ import {
 } from "./dialog/processSystem";
 import {progressLoading} from "./dialog/progress";
 import {syncCheckoutProgress} from "./sync/checkoutProgress";
-import {initMessage, showMessage} from "./dialog/message";
+import {initMessage} from "./dialog/message";
 import {getAllModels, getAllTabs} from "./layout/getAll";
 import {getLocalStorage, isChromeBrowser, isInMobileApp, isIOSDevice} from "./protyle/util/compatibility";
 import {isBrowser} from "./util/functions";
@@ -380,14 +380,13 @@ export class App {
                         // 加载遮罩移除后再显示主窗口，避免原生窗口按钮出现在启动界面上。
                         ipcRenderer.send(Constants.SIYUAN_READY_TO_SHOW);
                         /// #endif
-                        onSetaccount();
                         setTitle("", true);
                         initMessage();
                         /// #if BROWSER && !MOBILE
                         if (!isInMobileApp() && !isIOSDevice() && !window.siyuan.config.readonly &&
                             !window.siyuan.isPublish && !isChromeBrowser()
                             && window.siyuan.config.appearance.notifications?.browserCompatibility !== false) {
-                            showMessage(window.siyuan.languages.useChrome, 0, "error");
+                            // showMessage(window.siyuan.languages.useChrome, 0, "error");
                         }
                         /// #endif
                         window.siyuan.isReady = true;

@@ -4,16 +4,9 @@ import * as electron from "electron";
 import {paths, writeLog} from "../shared/runtime";
 import {resolveAppLanguage} from "../shared/language";
 
-const prereleasePattern = /-(?:alpha|beta|rc)(?:[.-]|\d|$)/i;
-
-/** 预发布版本只发布在 GitHub，正式版本走下载镜像。 */
-const getAppleSiliconDownloadURL = (version: string): string => {
-    const packageName = `siyuan-${version}-mac-arm64.dmg`;
-    if (prereleasePattern.test(version)) {
-        return `https://github.com/siyuan-note/siyuan/releases/download/v${version}/${packageName}`;
-    }
-    return `https://release.liuyun.io/siyuan/${packageName}`;
-};
+/** 自用 fork 的安装包统一发布在 GitHub Releases。 */
+const getAppleSiliconDownloadURL = (version: string): string =>
+    `https://github.com/ulquiola/siyuan/releases/download/v${version}/siyuan-${version}-mac-arm64.dmg`;
 
 /** 弹窗只有一个功能按钮，取消按钮排在它之后。 */
 const shouldDownloadAppleSilicon = (response: number): boolean => response === 0;

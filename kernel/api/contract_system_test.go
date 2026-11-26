@@ -252,7 +252,7 @@ func TestAPIContractSystemExitPackageAnnouncement(t *testing.T) {
 			t.Fatalf("invalid exit response: %s (%v)", recorder.Body.String(), err)
 		}
 		if code == 2 {
-			if result.Data.ReleaseURL != "https://github.com/siyuan-note/siyuan/releases/tag/v99.0.0-beta.3" {
+			if result.Data.ReleaseURL != "https://github.com/ulquiola/siyuan/releases/tag/v99.0.0-beta.3" {
 				t.Fatalf("announcement does not match the pending installer: %s", recorder.Body.String())
 			}
 		} else if strings.Contains(recorder.Body.String(), `"releaseURL"`) {

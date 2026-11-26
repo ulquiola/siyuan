@@ -1,0 +1,330 @@
+// SiYuan - https://github.com/siyuan-note/siyuan
+// Copyright (c) 2020-present, b3log.org
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+//go:build !android && !ios
+
+package tailscale
+
+import (
+	"context"
+	"errors"
+	"io"
+	"net"
+	"net/http"
+	"net/netip"
+	"strings"
+	"testing"
+	"time"
+	"unicode/utf8"
+
+	"tailscale.com/ipn/ipnstate"
+	"tailscale.com/net/tshttpproxy"
+	"tailscale.com/tsnet"
+)
+
+func TestEnsureControlProxyDirect(t *testing.T) {
+	// 思源可能把进程代理设成任意地址，Tailscale 的控制面连接不能跟随
+	t.Setenv("HTTP_PROXY", "socks5://127.0.0.1:1055")
+	t.Setenv("HTTPS_PROXY", "socks5://127.0.0.1:1055")
+	t.Setenv("NO_PROXY", "")
+
+	ensureControlProxyDirect()
+
+	request, err := http.NewRequest(http.MethodGet, "https://controlplane.tailscale.com/key", nil)
+	if nil != err {
+		t.Fatalf("create request: %s", err)
+	}
+	proxy, err := tshttpproxy.ProxyFromEnvironment(request)
+	if nil != err {
+		t.Fatalf("lookup proxy: %s", err)
+	}
+	if nil != proxy {
+		t.Fatalf("expected direct connection, got proxy [%s]", proxy)
+	}
+}
+
+func TestControlLogfKeepsLastControlError(t *testing.T) {
+	resetControlError()
+	defer resetControlError()
+
+	// 不含错误关键词的控制面日志不应当被当成错误
+	controlLogf("control: authRoutine: loggedIn=false; wantLoggedIn=true")
+	if "" != lastControlError() {
+		t.Fatalf("informational log should be ignored, got [%s]", lastControlError())
+	}
+
+	controlLogf("control: TryLogin: fetch control key: %s", "proxyconnect tcp: connection failed")
+	if !strings.Contains(lastControlError(), "proxyconnect") {
+		t.Fatalf("control error should be kept, got [%s]", lastControlError())
+	}
+
+	controlLogf("%s", "control: "+strings.Repeat("x", 400)+" error")
+	if controlErrLimit < len(lastControlError()) {
+		t.Fatalf("control error should be truncated, got [%d] bytes", len(lastControlError()))
+	}
+
+	// 多字节文本按字符截断，不能留下半个字符
+	controlLogf("%s", "control: "+strings.Repeat("错", controlErrLimit+10)+" error")
+	if got := lastControlError(); controlErrLimit != len([]rune(got)) {
+		t.Fatalf("control error should be truncated to %d runes, got [%d]", controlErrLimit, len([]rune(got)))
+	}
+	if strings.ContainsRune(lastControlError(), utf8.RuneError) {
+		t.Fatalf("control error should not contain replacement characters, got [%s]", lastControlError())
+	}
+
+	resetControlError()
+	if "" != lastControlError() {
+		t.Fatalf("reset should clear the control error, got [%s]", lastControlError())
+	}
+}
+
+func TestWithControlDetail(t *testing.T) {
+	resetControlError()
+	defer resetControlError()
+	controlLogf("control: %s", "mapRoutine failed")
+
+	starting := withControlDetail(NodeStatus{State: "starting"})
+	if "mapRoutine failed" != starting.Error {
+		t.Fatalf("not connected status should carry the control error, got [%s]", starting.Error)
+	}
+
+	running := withControlDetail(NodeStatus{State: "running"})
+	if "" != running.Error {
+		t.Fatalf("running status should not carry the control error, got [%s]", running.Error)
+	}
+
+	existing := withControlDetail(NodeStatus{State: "error", Error: "listen failed"})
+	if "listen failed" != existing.Error {
+		t.Fatalf("existing error should be kept, got [%s]", existing.Error)
+	}
+}
+
+func TestStatusFromState(t *testing.T) {
+	running := statusFromState(&ipnstate.Status{
+		BackendState: "Running",
+		TailscaleIPs: []netip.Addr{netip.MustParseAddr("100.64.0.5")},
+	})
+	if "running" != running.State || 1 != len(running.IPs) || "100.64.0.5" != running.IPs[0] {
+		t.Fatalf("unexpected running status: %#v", running)
+	}
+
+	needsLogin := statusFromState(&ipnstate.Status{BackendState: "NeedsLogin", AuthURL: "https://login.tailscale.com/a/1"})
+	if "needsLogin" != needsLogin.State || "https://login.tailscale.com/a/1" != needsLogin.AuthURL {
+		t.Fatalf("unexpected login status: %#v", needsLogin)
+	}
+
+	invalid := statusFromState(&ipnstate.Status{BackendState: "Invalid", Health: []string{"backend error"}})
+	if "error" != invalid.State || "Invalid: backend error" != invalid.Error {
+		t.Fatalf("unexpected invalid status: %#v", invalid)
+	}
+
+	starting := statusFromState(&ipnstate.Status{BackendState: "Starting"})
+	if "starting" != starting.State {
+		t.Fatalf("unexpected starting status: %#v", starting)
+	}
+}
+
+func TestStatusFromStateTreatsStoppedAsStarting(t *testing.T) {
+	for _, state := range []string{"NoState", "Starting", "Stopped"} {
+		if got := statusFromState(&ipnstate.Status{BackendState: state}); "starting" != got.State {
+			t.Fatalf("backend state [%s] should be starting, got [%s]", state, got.State)
+		}
+	}
+	if got := statusFromState(&ipnstate.Status{BackendState: "Stopped", AuthURL: "https://login.tailscale.com/a/1"}); "https://login.tailscale.com/a/1" != got.AuthURL {
+		t.Fatalf("auth url should survive, got [%s]", got.AuthURL)
+	}
+}
+
+func TestAuthURLCacheSurvivesQueryFailure(t *testing.T) {
+	defer func() {
+		rememberAuthURL("")
+		nodeMu.Lock()
+		lastErr = ""
+		nodeMu.Unlock()
+	}()
+
+	rememberAuthURL("https://login.tailscale.com/a/9")
+	if "https://login.tailscale.com/a/9" != cachedAuthURL() {
+		t.Fatalf("cache should keep the auth url, got [%s]", cachedAuthURL())
+	}
+
+	setLastError("tailscaleStartError", errors.New("query failed"))
+	failed := Status()
+	if "error" != failed.State || "https://login.tailscale.com/a/9" != failed.AuthURL {
+		t.Fatalf("error status should still carry the cached auth url, got %#v", failed)
+	}
+
+	rememberAuthURL("")
+	if "" != cachedAuthURL() {
+		t.Fatalf("empty url should clear the cache, got [%s]", cachedAuthURL())
+	}
+}
+
+func TestStatusForEnabledWithoutNodeIsStarting(t *testing.T) {
+	enabled := true
+	if got := StatusFor(&Config{Enabled: &enabled}); "starting" != got.State {
+		t.Fatalf("enabled config without node should be starting, got [%s]", got.State)
+	}
+	disabled := false
+	if got := StatusFor(&Config{Enabled: &disabled}); "disabled" != got.State {
+		t.Fatalf("disabled config should stay disabled, got [%s]", got.State)
+	}
+	if got := StatusFor(nil); "disabled" != got.State {
+		t.Fatalf("nil config should stay disabled, got [%s]", got.State)
+	}
+}
+
+func TestUserLogfFoldsRepeatedMessages(t *testing.T) {
+	logger := &userLogf{}
+	if !logger.shouldLog("login required") {
+		t.Fatal("first message should be logged")
+	}
+	if logger.shouldLog("login required") {
+		t.Fatal("repeated message should be folded")
+	}
+	if !logger.shouldLog("node online") {
+		t.Fatal("changed message should be logged")
+	}
+	if !logger.shouldLog("login required") {
+		t.Fatal("message after a different one should be logged again")
+	}
+}
+
+func TestServeSOCKSForwardsThroughDialer(t *testing.T) {
+	echoListener, err := net.Listen("tcp", "127.0.0.1:0")
+	if nil != err {
+		t.Fatalf("listen echo: %s", err)
+	}
+	defer echoListener.Close()
+	go func() {
+		for {
+			conn, acceptErr := echoListener.Accept()
+			if nil != acceptErr {
+				return
+			}
+			go func() {
+				defer conn.Close()
+				io.Copy(conn, conn)
+			}()
+		}
+	}()
+
+	proxyListener, err := net.Listen("tcp", "127.0.0.1:0")
+	if nil != err {
+		t.Fatalf("listen proxy: %s", err)
+	}
+	defer proxyListener.Close()
+	// 拨号器忽略请求里的地址，直接转发到本地回显服务，用来验证 SOCKS5 与自定义拨号的接驳
+	dialer := func(ctx context.Context, network, address string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, "tcp", echoListener.Addr().String())
+	}
+	go serveSOCKS(proxyListener, dialer)
+
+	conn := socks5Connect(t, proxyListener.Addr().String())
+	defer conn.Close()
+	if err = conn.SetDeadline(time.Now().Add(5 * time.Second)); nil != err {
+		t.Fatalf("set deadline: %s", err)
+	}
+	if _, err = conn.Write([]byte("ping")); nil != err {
+		t.Fatalf("write payload: %s", err)
+	}
+	reply := make([]byte, 4)
+	if _, err = io.ReadFull(conn, reply); nil != err {
+		t.Fatalf("read payload: %s", err)
+	}
+	if "ping" != string(reply) {
+		t.Fatalf("payload = %q, want %q", reply, "ping")
+	}
+}
+
+func socks5Connect(t *testing.T, proxyAddr string) net.Conn {
+	t.Helper()
+	conn, err := net.Dial("tcp", proxyAddr)
+	if nil != err {
+		t.Fatalf("dial proxy: %s", err)
+	}
+	if _, err = conn.Write([]byte{0x05, 0x01, 0x00}); nil != err {
+		t.Fatalf("write greeting: %s", err)
+	}
+	greeting := make([]byte, 2)
+	if _, err = io.ReadFull(conn, greeting); nil != err {
+		t.Fatalf("read greeting: %s", err)
+	}
+	if 0x05 != greeting[0] || 0x00 != greeting[1] {
+		t.Fatalf("greeting = %v, want [5 0]", greeting)
+	}
+
+	request := []byte{0x05, 0x01, 0x00, 0x03, 11}
+	request = append(request, []byte("example.com")...)
+	request = append(request, 0x00, 0x50)
+	if _, err = conn.Write(request); nil != err {
+		t.Fatalf("write connect request: %s", err)
+	}
+	header := make([]byte, 4)
+	if _, err = io.ReadFull(conn, header); nil != err {
+		t.Fatalf("read connect reply: %s", err)
+	}
+	if 0x00 != header[1] {
+		t.Fatalf("connect reply code = %d, want 0", header[1])
+	}
+	switch header[3] {
+	case 0x01:
+		_, err = io.ReadFull(conn, make([]byte, 4+2))
+	case 0x04:
+		_, err = io.ReadFull(conn, make([]byte, 16+2))
+	case 0x03:
+		length := make([]byte, 1)
+		if _, err = io.ReadFull(conn, length); nil == err {
+			_, err = io.ReadFull(conn, make([]byte, int(length[0])+2))
+		}
+	default:
+		t.Fatalf("unexpected address type %d", header[3])
+	}
+	if nil != err {
+		t.Fatalf("read bound address: %s", err)
+	}
+	return conn
+}
+
+func TestRunningNodeStopClosesListener(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if nil != err {
+		t.Fatalf("listen: %s", err)
+	}
+	serverClosed := false
+	node := &runningNode{
+		listener:    listener,
+		config:      &Config{Hostname: "node"},
+		closeServer: func() error { serverClosed = true; return nil },
+	}
+	node.stop()
+
+	if !serverClosed {
+		t.Fatal("server should be closed")
+	}
+	if _, err = listener.Accept(); !errors.Is(err, net.ErrClosed) {
+		t.Fatalf("listener should be closed, got %v", err)
+	}
+}
+
+func TestIsCurrentNode(t *testing.T) {
+	server := &tsnet.Server{}
+	other := &tsnet.Server{}
+	nodeMu.Lock()
+	previous := current
+	current = &runningNode{server: server}
+	nodeMu.Unlock()
+	t.Cleanup(func() {
+		nodeMu.Lock()
+		current = previous
+		nodeMu.Unlock()
+	})
+
+	if !isCurrentNode(server) {
+		t.Fatal("current node should be recognized")
+	}
+	if isCurrentNode(other) {
+		t.Fatal("other node should not be recognized")
+	}
+}
