@@ -104,12 +104,14 @@ func tailscaleData() apicontract.TailscaleData {
 			Hostname:     config.Hostname,
 			AuthKeySaved: "" != config.AuthKey,
 			Listen:       config.Listen,
+			SyncNetwork:  config.SyncNetwork,
 		},
 		Status: apicontract.TailscaleStatus{
-			State:   status.State,
-			AuthURL: status.AuthURL,
-			IPs:     status.IPs,
-			Error:   status.Error,
+			State:     status.State,
+			AuthURL:   status.AuthURL,
+			IPs:       status.IPs,
+			Error:     status.Error,
+			KeyExpiry: status.KeyExpiry,
 		},
 	}
 }
@@ -1439,9 +1441,14 @@ var setTailscale = contractHandler(apicontract.SetTailscale, func(c *gin.Context
 		AuthKey:      request.AuthKey,
 		ClearAuthKey: request.ClearAuthKey,
 		Listen:       request.Listen,
+		SyncNetwork:  request.SyncNetwork,
 	}
 	if err := tailscale.SaveConfig(tailscale.ConfigDir(), config); nil != err {
 		return apicontract.Failure[apicontract.TailscaleData](-1, tailscaleErrorMessage("tailscaleConfigError", err))
+	}
+	model.ApplyNetworkProxy()
+	if tailscale.SyncNetworkDirect == tailscale.SyncNetworkMode() {
+		model.HideTailscaleSyncNotice()
 	}
 	return apicontract.Success(tailscaleData())
 })

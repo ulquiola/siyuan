@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "等待管理员批准设备",
+	"tailscaleKeyExpired": "登录已过期，请重新登录",
+	"tailscaleKeyExpiring": "设备密钥将于 ${date} 过期",
+	"tailscaleSyncBlocked": "内嵌 Tailscale 未登录，同步暂停；登录后会自动恢复",
+	"tailscaleSyncNetwork": "同步网络",
+	"tailscaleSyncNetworkDirect": "直连",
+	"tailscaleSyncNetworkProxy": "代理（内嵌 Tailscale）",
+	"tailscaleSyncNetworkTip": "S3/WebDAV 同步可选择直连或经内嵌 Tailscale 节点；其他流量不受影响",
 	"tailscaleClearAuthKey": "清除已保存的密钥",
 	"tailscaleAuthKeySaved": "已保存，留空表示保持不变",
 	"tailscaleConfigError": "Tailscale 配置错误",

@@ -151,7 +151,7 @@ func systemReactions() []Reaction[*conf.System] {
 		return old.NetworkProxy == nil || old.NetworkProxy.String() != next.NetworkProxy.String() ||
 			old.NetworkProxy.IsSystem() != next.NetworkProxy.IsSystem()
 	}, Apply: func(old, next *conf.System) {
-		util.SetNetworkProxy(next.NetworkProxy.String(), next.NetworkProxy.IsSystem())
+		applyNetworkProxy(next.NetworkProxy)
 	}}}
 }
 

@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -19,7 +20,10 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/siyuan-note/dejavu"
 	"github.com/siyuan-note/dejavu/cloud"
+	"github.com/siyuan-note/httpclient"
 	"github.com/siyuan-note/siyuan/kernel/conf"
+	"github.com/siyuan-note/siyuan/kernel/tailscale"
+	"github.com/siyuan-note/siyuan/kernel/util"
 )
 
 // probeServer 是最小的 S3 兼容端点：记录写入、列举与删除，用于验证探测结论。
@@ -262,5 +266,41 @@ func TestTestSyncProviderS3ListingLag(t *testing.T) {
 	}
 	if 0 != lagging.listLag {
 		t.Fatalf("listing lag was not exercised: %d", lagging.listLag)
+	}
+}
+
+// TestS3ProbeUsesSyncTransportMode 确认测试连接与真实同步共用同一套直连/代理传输。
+func TestS3ProbeUsesSyncTransportMode(t *testing.T) {
+	oldHome := util.HomeDir
+	util.HomeDir = t.TempDir()
+	t.Cleanup(func() { util.HomeDir = oldHome })
+	configDir := tailscale.ConfigDir()
+	if err := os.MkdirAll(configDir, 0755); nil != err {
+		t.Fatalf("create config dir: %s", err)
+	}
+	write := func(mode string) {
+		payload := `{"enabled":true,"listen":"127.0.0.1:2055","syncNetwork":"` + mode + `"}`
+		if err := os.WriteFile(filepath.Join(configDir, "tailscale.json"), []byte(payload), 0600); nil != err {
+			t.Fatalf("write config: %s", err)
+		}
+	}
+	for _, test := range []struct{ mode, want string }{{"direct", "direct"}, {"proxy", "proxy"}} {
+		write(test.mode)
+		client := newS3ProbeClient(&conf.S3{Endpoint: "http://s3.example", Timeout: 60, ConcurrentReqs: 1})
+		s3, ok := client.(*cloud.S3)
+		if !ok {
+			t.Fatalf("probe client type = %T", client)
+		}
+		ua, ok := s3.HTTPClient.Transport.(*httpclient.UserAgentTransport)
+		if !ok {
+			t.Fatalf("transport type = %T", s3.HTTPClient.Transport)
+		}
+		transport, ok := ua.Base.(*tailscale.SyncTransport)
+		if !ok {
+			t.Fatalf("base transport type = %T", ua.Base)
+		}
+		if transport.Mode() != test.want {
+			t.Fatalf("mode = %q, want %q", transport.Mode(), test.want)
+		}
 	}
 }

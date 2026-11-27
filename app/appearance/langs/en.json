@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Waiting for an admin to approve this device",
+	"tailscaleKeyExpired": "Login expired, sign in again",
+	"tailscaleKeyExpiring": "Device key expires on ${date}",
+	"tailscaleSyncBlocked": "Embedded Tailscale is not logged in; sync resumes after login",
+	"tailscaleSyncNetwork": "Sync network",
+	"tailscaleSyncNetworkDirect": "Direct",
+	"tailscaleSyncNetworkProxy": "Proxy (embedded Tailscale)",
+	"tailscaleSyncNetworkTip": "S3/WebDAV sync can connect directly or through the embedded Tailscale node; other traffic is unaffected",
 	"tailscaleClearAuthKey": "Clear saved key",
 	"tailscaleAuthKeySaved": "Saved, leave blank to keep the current key",
 	"tailscaleConfigError": "Tailscale configuration error",

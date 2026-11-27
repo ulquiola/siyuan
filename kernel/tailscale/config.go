@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -20,14 +21,19 @@ const (
 	configFileName  = "tailscale.json"
 	defaultHostname = "siyuan-desktop"
 	defaultListen   = "127.0.0.1:1055"
+
+	// SyncNetworkDirect 表示同步请求普通直连，不使用内嵌节点；SyncNetworkProxy 表示经内嵌节点拨号。
+	SyncNetworkDirect = "direct"
+	SyncNetworkProxy  = "proxy"
 )
 
-// NodeStatus 是内嵌节点对外暴露的运行状态，state 取值 disabled、starting、needsLogin、running 或 error。
+// NodeStatus 是内嵌节点对外暴露的运行状态，state 取值 disabled、starting、needsLogin、needsMachineAuth、running 或 error。
 type NodeStatus struct {
-	State   string   `json:"state"`
-	AuthURL string   `json:"authURL"`
-	IPs     []string `json:"ips"`
-	Error   string   `json:"error"`
+	State     string   `json:"state"`
+	AuthURL   string   `json:"authURL"`
+	IPs       []string `json:"ips"`
+	Error     string   `json:"error"`
+	KeyExpiry string   `json:"keyExpiry"` // 节点密钥到期时间，RFC3339；未知为空
 }
 
 // Config 是配置目录下 tailscale.json 的结构；文件不存在时内嵌 Tailscale 整体关闭。
@@ -41,6 +47,7 @@ type Config struct {
 	ClearAuthKey bool   `json:"-"`        // 仅用于请求，为 true 时删除已保存的密钥
 	Listen       string `json:"listen"`   // SOCKS5 监听地址，仅允许回环地址
 	StateDir     string `json:"stateDir"` // 节点状态目录，留空使用配置目录下的 tailscale
+	SyncNetwork  string `json:"syncNetwork"`
 }
 
 // LoadConfig 读取配置目录下的 tailscale.json。
@@ -72,6 +79,7 @@ func (c *Config) normalize(configDir string) {
 	c.AuthKey = strings.TrimSpace(c.AuthKey)
 	c.Listen = strings.TrimSpace(c.Listen)
 	c.StateDir = strings.TrimSpace(c.StateDir)
+	c.SyncNetwork = strings.TrimSpace(c.SyncNetwork)
 	if "" == c.Hostname {
 		c.Hostname = defaultHostname
 	}
@@ -81,9 +89,20 @@ func (c *Config) normalize(configDir string) {
 	if "" == c.StateDir {
 		c.StateDir = filepath.Join(configDir, "tailscale")
 	}
+	if "" == c.SyncNetwork {
+		// 启用内嵌节点时默认经节点同步，保持从 SOCKS 代理迁移过来的行为；未启用时默认直连。
+		if c.IsEnabled() {
+			c.SyncNetwork = SyncNetworkProxy
+		} else {
+			c.SyncNetwork = SyncNetworkDirect
+		}
+	}
 }
 
 func (c *Config) validate() error {
+	if SyncNetworkDirect != c.SyncNetwork && SyncNetworkProxy != c.SyncNetwork {
+		return fmt.Errorf("invalid tailscale sync network [%s]", c.SyncNetwork)
+	}
 	host, port, err := net.SplitHostPort(c.Listen)
 	if nil != err {
 		return fmt.Errorf("invalid tailscale listen address [%s]: %w", c.Listen, err)
@@ -120,8 +139,9 @@ func NewConfig(configDir string) *Config {
 	return config
 }
 
-// SaveConfig 校验并写入配置，随后异步重建内嵌节点。
+// SaveConfig 校验并写入配置；只有节点相关字段变化时才异步重建内嵌节点。
 func SaveConfig(configDir string, config *Config) error {
+	old, _ := LoadConfig(configDir)
 	prepared, err := prepareConfig(configDir, config)
 	if nil != err {
 		return err
@@ -129,8 +149,81 @@ func SaveConfig(configDir string, config *Config) error {
 	if err = writeConfigFile(configDir, prepared); nil != err {
 		return err
 	}
-	go Apply(configDir)
+	if nodeConfigChanged(old, prepared) {
+		go applyConfig(configDir)
+	}
 	return nil
+}
+
+// applyConfig 是 Apply 的测试替身入口，保存配置时按节点字段是否变化决定是否调用。
+var applyConfig = Apply
+
+// nodeConfigChanged 判断保存配置是否需要重建节点；同步网络只影响 S3/WebDAV 传输，不重启节点。
+func nodeConfigChanged(old, next *Config) bool {
+	if nil == old || nil == next {
+		return true
+	}
+	if old.IsEnabled() != next.IsEnabled() {
+		return true
+	}
+	return old.Hostname != next.Hostname || old.AuthKey != next.AuthKey || old.Listen != next.Listen || old.StateDir != next.StateDir
+}
+
+// SyncNetworkMode 返回当前同步网络模式，配置缺失时按直连处理。
+func SyncNetworkMode() string {
+	return syncNetworkMode(ConfigDir())
+}
+
+func syncNetworkMode(configDir string) string {
+	config, err := LoadConfig(configDir)
+	if nil != err || nil == config {
+		return SyncNetworkDirect
+	}
+	return config.SyncNetwork
+}
+
+// IsEmbeddedProxy 判断代理地址是否指向内嵌 Tailscale 的 SOCKS 监听；该地址只服务外部工具，不再作为全局代理。
+func IsEmbeddedProxy(proxyURL string) bool {
+	return isEmbeddedProxy(ConfigDir(), proxyURL)
+}
+
+func isEmbeddedProxy(configDir, proxyURL string) bool {
+	proxyURL = strings.TrimSpace(proxyURL)
+	if "" == proxyURL {
+		return false
+	}
+	config, err := LoadConfig(configDir)
+	if nil != err || nil == config {
+		return false
+	}
+	parsed, err := url.Parse(proxyURL)
+	if nil != err {
+		return false
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	if "socks5" != scheme && "socks5h" != scheme {
+		return false
+	}
+	listenHost, listenPort, err := net.SplitHostPort(config.Listen)
+	if nil != err || parsed.Port() != listenPort {
+		return false
+	}
+	return sameLoopbackHost(parsed.Hostname(), listenHost)
+}
+
+// sameLoopbackHost 把 localhost、127.0.0.1 与 ::1 视为同一回环主机。
+func sameLoopbackHost(a, b string) bool {
+	if strings.EqualFold(a, b) {
+		return true
+	}
+	isLoopback := func(host string) bool {
+		if "localhost" == strings.ToLower(host) {
+			return true
+		}
+		ip := net.ParseIP(host)
+		return nil != ip && ip.IsLoopback()
+	}
+	return isLoopback(a) && isLoopback(b)
 }
 
 // prepareConfig 归一化并校验配置，界面不编辑状态目录，请求中的空值表示沿用已有配置或默认值。

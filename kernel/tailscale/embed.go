@@ -111,6 +111,7 @@ func Apply(configDir string) {
 	current = nil
 	lastErr = ""
 	nodeMu.Unlock()
+	nodeState.resetStatus()
 	// 清空发生在重建开始时、旧节点停止之前，此后缓存的链接只会来自新节点，
 	// 禁用或启动失败时也不会沿用上一节点残留的链接
 	rememberAuthURL("")
@@ -121,12 +122,15 @@ func Apply(configDir string) {
 
 	config, err := LoadConfig(configDir)
 	if nil != err {
+		nodeEnabled.Store(false)
 		setLastError("tailscaleConfigError", err)
 		return
 	}
 	if nil == config || !config.IsEnabled() {
+		nodeEnabled.Store(false)
 		return
 	}
+	nodeEnabled.Store(true)
 
 	listener, err := net.Listen("tcp", config.Listen)
 	if nil != err {
@@ -159,6 +163,7 @@ func Apply(configDir string) {
 		}
 	}()
 	go logNodeAddress(server, config.Hostname)
+	go watchNode(server)
 }
 
 // Status 返回内嵌节点当前的运行状态。
@@ -187,6 +192,10 @@ func Status() NodeStatus {
 		return NodeStatus{State: "error", Error: err.Error(), AuthURL: cachedAuthURL()}
 	}
 	ret := statusFromState(status)
+	if isCurrentNode(node.server) {
+		ret = nodeState.withKeyExpiry(ret)
+		nodeState.update(ret)
+	}
 	if "running" == ret.State && "" != lastControlError() {
 		// 连接成功后清掉旧的控制面错误，避免节点再次断开时展示过期原因
 		resetControlError()
@@ -226,8 +235,10 @@ func statusFromState(status *ipnstate.Status) NodeStatus {
 	switch status.BackendState {
 	case "Running":
 		ret.State = "running"
-	case "NeedsLogin", "NeedsMachineAuth":
+	case "NeedsLogin":
 		ret.State = "needsLogin"
+	case "NeedsMachineAuth":
+		ret.State = "needsMachineAuth"
 	// 未启动的节点仍可能带着登录链接，按未就绪展示，避免把用户的登录提示当成错误
 	case "Starting", "NoState", "Stopped":
 		ret.State = "starting"
@@ -237,6 +248,9 @@ func statusFromState(status *ipnstate.Status) NodeStatus {
 		if health := strings.Join(status.Health, "; "); "" != health {
 			ret.Error += ": " + health
 		}
+	}
+	if nil != status.Self && nil != status.Self.KeyExpiry {
+		ret.KeyExpiry = status.Self.KeyExpiry.UTC().Format(time.RFC3339)
 	}
 	for _, ip := range status.TailscaleIPs {
 		ret.IPs = append(ret.IPs, ip.String())

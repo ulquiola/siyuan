@@ -30,19 +30,30 @@ import (
 	"github.com/siyuan-note/siyuan/kernel/conf"
 	"github.com/siyuan-note/siyuan/kernel/filesys"
 	"github.com/siyuan-note/siyuan/kernel/sql"
+	"github.com/siyuan-note/siyuan/kernel/tailscale"
 	"github.com/siyuan-note/siyuan/kernel/treenode"
 	"github.com/siyuan-note/siyuan/kernel/util"
 )
 
 func publishSyncResult(code int, syncErr error) {
+	blocked := 2 == code && nil != syncErr && syncBlocked()
 	snapshot := UpdateSyncConf(func(s *conf.Sync) {
 		s.LastResult = code
 		if syncErr != nil {
-			s.Stat = formatSyncRepoErrorMsg(syncErr)
+			if blocked {
+				s.Stat = tailscale.SyncBlockedMessage()
+			} else {
+				s.Stat = formatSyncRepoErrorMsg(syncErr)
+			}
 		} else if code == 1 {
 			s.Synced = util.CurrentTimeMillis()
 		}
 	})
+	if blocked {
+		showTailscaleSyncNotice()
+	} else if 1 == code {
+		hideTailscaleSyncNotice()
+	}
 	util.BroadcastByType("main", "syncing", code, snapshot.Stat, nil)
 }
 
@@ -231,7 +242,9 @@ func finishBootSync(revision uint64, cloudPublished bool, err error) {
 			msg := formatSyncRepoErrorMsg(err)
 			UpdateSyncConf(func(s *conf.Sync) { s.Stat = msg })
 			pushSyncStatusBar(msg)
-			util.PushErrMsg(msg, 0)
+			if !syncBlocked() {
+				util.PushErrMsg(msg, 0)
+			}
 		}
 	} else {
 		BootSyncSucc.Store(0)

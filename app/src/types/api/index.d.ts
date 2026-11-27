@@ -2696,13 +2696,13 @@ export type TagSnapshotRequestInput = { "id": string; "name": string; };
 
 export type TailChildBlocksRequestInput = { "id": string; "ids"?: Array<string> | null; "n"?: number | null; "notebook"?: string | null; };
 
-export type TailscaleConfig = { "authKeySaved": boolean; "enabled": boolean; "hostname": string; "listen": string; };
+export type TailscaleConfig = { "authKeySaved": boolean; "enabled": boolean; "hostname": string; "listen": string; "syncNetwork": string; };
 
-export type TailscaleConfigRequestInput = { "authKey": string; "clearAuthKey": boolean; "enabled": boolean; "hostname": string; "listen": string; };
+export type TailscaleConfigRequestInput = { "authKey": string; "clearAuthKey": boolean; "enabled": boolean; "hostname": string; "listen": string; "syncNetwork"?: string; };
 
 export type TailscaleData = { "config": TailscaleConfig; "status": TailscaleStatus; };
 
-export type TailscaleStatus = { "authURL": string; "error": string; "ips": Array<string> | null; "state": string; };
+export type TailscaleStatus = { "authURL": string; "error": string; "ips": Array<string> | null; "keyExpiry": string; "state": string; };
 
 export type TaskListMarkerRequestInput = { "id": string; "marker": string; };
 

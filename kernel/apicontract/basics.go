@@ -30,6 +30,7 @@ type TailscaleConfig struct {
 	Hostname     string `json:"hostname"`
 	AuthKeySaved bool   `json:"authKeySaved"` // 是否已经保存过密钥，密钥本身不会返回
 	Listen       string `json:"listen"`
+	SyncNetwork  string `json:"syncNetwork"` // direct 或 proxy，只影响 S3/WebDAV
 }
 
 // TailscaleConfigRequest 是保存 Tailscale 配置的请求体，不包含只用于响应的 authKeySaved。
@@ -39,14 +40,16 @@ type TailscaleConfigRequest struct {
 	AuthKey      string `json:"authKey"`      // 为空表示沿用已保存的密钥
 	ClearAuthKey bool   `json:"clearAuthKey"` // 为 true 时删除已保存的密钥
 	Listen       string `json:"listen"`
+	SyncNetwork  string `json:"syncNetwork" api:"optional"` // direct 或 proxy，空值按启用状态取默认
 }
 
-// TailscaleStatus 是内嵌节点当前的运行状态，state 取值 disabled、starting、needsLogin、running 或 error。
+// TailscaleStatus 是内嵌节点当前的运行状态，state 取值 disabled、starting、needsLogin、needsMachineAuth、running 或 error。
 type TailscaleStatus struct {
-	State   string   `json:"state"`
-	AuthURL string   `json:"authURL"`
-	IPs     []string `json:"ips"`
-	Error   string   `json:"error"`
+	State     string   `json:"state"`
+	AuthURL   string   `json:"authURL"`
+	IPs       []string `json:"ips"`
+	Error     string   `json:"error"`
+	KeyExpiry string   `json:"keyExpiry"` // 节点密钥到期时间，RFC3339；未知为空
 }
 
 type TailscaleData struct {

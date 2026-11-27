@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "管理者によるデバイス承認を待っています",
+	"tailscaleKeyExpired": "ログインの有効期限が切れました。再度ログインしてください",
+	"tailscaleKeyExpiring": "デバイスキーは ${date} に期限切れになります",
+	"tailscaleSyncBlocked": "組み込み Tailscale がログインしていないため、同期を一時停止しています。ログイン後に自動で再開します",
+	"tailscaleSyncNetwork": "同期ネットワーク",
+	"tailscaleSyncNetworkDirect": "直接接続",
+	"tailscaleSyncNetworkProxy": "プロキシ（組み込み Tailscale）",
+	"tailscaleSyncNetworkTip": "S3/WebDAV の同期は直接接続または組み込み Tailscale ノード経由を選択できます。他の通信には影響しません",
 	"tailscaleClearAuthKey": "保存済みのキーを削除",
 	"tailscaleAuthKeySaved": "保存済み、空欄のままにすると現在のキーを保持します",
 	"tailscaleConfigError": "Tailscale 設定エラー",

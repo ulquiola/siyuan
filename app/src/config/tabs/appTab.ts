@@ -30,6 +30,7 @@ import {sendAppSetting} from "./appRuntime";
 import {getHostCapabilities} from "../../util/hostCapabilities";
 import {genWorkspaceStorageHtml, mountWorkspaceStorage} from "./workspaceStorage";
 import {applyTailscaleStatus, ITailscaleLanguages, ITailscaleStatus} from "./tailscaleStatus";
+import {normalizeSyncNetwork} from "./tailscaleSyncNetwork";
 import type {TailscaleData} from "../../types/api";
 import {importDataFile} from "../../menus/importData";
 
@@ -452,6 +453,15 @@ const genTailscaleHtml = (): string => `<div class="b3-label config-item">
         <span class="fn__space"></span>
         <input spellcheck="false" id="tailscaleListen" placeholder="${escapeHtmlTextAndAttr(window.siyuan.languages.tailscaleListen)}" class="b3-text-field fn__flex-1"/>
     </div>
+    <div class="b3-label__text fn__flex">
+        <span class="fn__flex-center">${window.siyuan.languages.tailscaleSyncNetwork}</span>
+        <span class="fn__space"></span>
+        <select id="tailscaleSyncNetwork" class="b3-select fn__flex-1">
+            <option value="direct">${window.siyuan.languages.tailscaleSyncNetworkDirect}</option>
+            <option value="proxy">${window.siyuan.languages.tailscaleSyncNetworkProxy}</option>
+        </select>
+    </div>
+    <div class="b3-label__text">${window.siyuan.languages.tailscaleSyncNetworkTip}</div>
     <div class="b3-label__text fn__flex" style="overflow: visible !important;">
         <input spellcheck="false" id="tailscaleAuthKey" type="password" autocomplete="off" placeholder="${escapeHtmlTextAndAttr(window.siyuan.languages.tailscaleAuthKey)}" class="b3-text-field fn__flex-1"/>
         <span class="fn__space"></span>
@@ -464,11 +474,12 @@ const mountTailscale = (root: HTMLElement) => {
     const enabledElement = root.querySelector("#tailscaleEnabled") as HTMLInputElement;
     const hostnameElement = root.querySelector("#tailscaleHostname") as HTMLInputElement;
     const listenElement = root.querySelector("#tailscaleListen") as HTMLInputElement;
+    const syncNetworkElement = root.querySelector("#tailscaleSyncNetwork") as HTMLSelectElement;
     const authKeyElement = root.querySelector("#tailscaleAuthKey") as HTMLInputElement;
     const statusElement = root.querySelector("#tailscaleStatus") as HTMLElement;
     const confirmElement = root.querySelector("#tailscaleConfirm") as HTMLButtonElement;
     const clearAuthKeyElement = root.querySelector("#tailscaleClearAuthKey") as HTMLButtonElement;
-    if (!enabledElement || !hostnameElement || !listenElement || !authKeyElement || !statusElement || !confirmElement || !clearAuthKeyElement) {
+    if (!enabledElement || !hostnameElement || !listenElement || !syncNetworkElement || !authKeyElement || !statusElement || !confirmElement || !clearAuthKeyElement) {
         return;
     }
 
@@ -480,6 +491,7 @@ const mountTailscale = (root: HTMLElement) => {
         enabledElement.checked = data.config.enabled;
         hostnameElement.value = data.config.hostname;
         listenElement.value = data.config.listen;
+        syncNetworkElement.value = normalizeSyncNetwork(data.config.syncNetwork);
         // 内核不回传已保存的密钥，空输入框只表示不修改
         authKeyElement.value = "";
         authKeyElement.placeholder = data.config.authKeySaved
@@ -489,6 +501,7 @@ const mountTailscale = (root: HTMLElement) => {
         renderStatus(data.status);
     };
 
+    let pollDelay = 3000;
     const refresh = (withConfig: boolean) => {
         fetchPost("/api/system/getTailscale", {}, (response) => {
             if (0 !== response.code) {
@@ -500,6 +513,8 @@ const mountTailscale = (root: HTMLElement) => {
                 applyData(data);
             } else {
                 renderStatus(data.status);
+                pollDelay = ("needsLogin" === data.status.state || "starting" === data.status.state ||
+                    "needsMachineAuth" === data.status.state) ? 2000 : 10000;
             }
         });
     };
@@ -513,6 +528,7 @@ const mountTailscale = (root: HTMLElement) => {
             authKey: authKeyElement.value.trim(),
             clearAuthKey,
             listen: listenElement.value.trim(),
+            syncNetwork: normalizeSyncNetwork(syncNetworkElement.value),
         }, (response) => {
             const data = response.data as TailscaleData;
             applyData(data);
@@ -537,9 +553,9 @@ const mountTailscale = (root: HTMLElement) => {
             return;
         }
         refresh(false);
-        window.setTimeout(poll, 3000);
+        window.setTimeout(poll, pollDelay);
     };
-    window.setTimeout(poll, 3000);
+    window.setTimeout(poll, pollDelay);
 };
 
 const registerAppDataGroup = (tab: SettingTabBuilder) => {

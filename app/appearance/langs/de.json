@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Warten auf die Freigabe dieses Geräts durch einen Administrator",
+	"tailscaleKeyExpired": "Anmeldung abgelaufen, bitte erneut anmelden",
+	"tailscaleKeyExpiring": "Geräteschlüssel läuft am ${date} ab",
+	"tailscaleSyncBlocked": "Eingebettetes Tailscale ist nicht angemeldet; die Synchronisierung wird nach der Anmeldung fortgesetzt",
+	"tailscaleSyncNetwork": "Synchronisierungsnetzwerk",
+	"tailscaleSyncNetworkDirect": "Direktverbindung",
+	"tailscaleSyncNetworkProxy": "Proxy (eingebettetes Tailscale)",
+	"tailscaleSyncNetworkTip": "S3/WebDAV-Synchronisierung kann direkt oder über den eingebetteten Tailscale-Knoten verbinden; anderer Datenverkehr bleibt unberührt",
 	"tailscaleClearAuthKey": "Gespeicherten Schlüssel löschen",
 	"tailscaleAuthKeySaved": "Gespeichert, leer lassen, um den aktuellen Schlüssel zu behalten",
 	"tailscaleConfigError": "Tailscale-Konfigurationsfehler",

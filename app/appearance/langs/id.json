@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Menunggu persetujuan perangkat ini oleh administrator",
+	"tailscaleKeyExpired": "Sesi berakhir, silakan masuk lagi",
+	"tailscaleKeyExpiring": "Kunci perangkat kedaluwarsa pada ${date}",
+	"tailscaleSyncBlocked": "Tailscale tersemat belum masuk; sinkronisasi akan dilanjutkan setelah masuk",
+	"tailscaleSyncNetwork": "Jaringan sinkronisasi",
+	"tailscaleSyncNetworkDirect": "Koneksi langsung",
+	"tailscaleSyncNetworkProxy": "Proksi (Tailscale tersemat)",
+	"tailscaleSyncNetworkTip": "Sinkronisasi S3/WebDAV dapat terhubung langsung atau melalui node Tailscale tersemat; lalu lintas lain tidak terpengaruh",
 	"tailscaleClearAuthKey": "Hapus kunci tersimpan",
 	"tailscaleAuthKeySaved": "Tersimpan, biarkan kosong untuk mempertahankan kunci saat ini",
 	"tailscaleConfigError": "Kesalahan konfigurasi Tailscale",

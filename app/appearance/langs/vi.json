@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Đang chờ quản trị viên phê duyệt thiết bị này",
+	"tailscaleKeyExpired": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+	"tailscaleKeyExpiring": "Khóa thiết bị hết hạn vào ${date}",
+	"tailscaleSyncBlocked": "Tailscale tích hợp chưa đăng nhập; đồng bộ sẽ tiếp tục sau khi đăng nhập",
+	"tailscaleSyncNetwork": "Mạng đồng bộ",
+	"tailscaleSyncNetworkDirect": "Kết nối trực tiếp",
+	"tailscaleSyncNetworkProxy": "Proxy (Tailscale tích hợp)",
+	"tailscaleSyncNetworkTip": "Đồng bộ S3/WebDAV có thể kết nối trực tiếp hoặc qua nút Tailscale tích hợp; lưu lượng khác không bị ảnh hưởng",
 	"tailscaleClearAuthKey": "Xóa khóa đã lưu",
 	"tailscaleAuthKeySaved": "Đã lưu, để trống để giữ khóa hiện tại",
 	"tailscaleConfigError": "Lỗi cấu hình Tailscale",

@@ -27,6 +27,7 @@ import (
 	"github.com/siyuan-note/siyuan/kernel/conf"
 	"github.com/siyuan-note/siyuan/kernel/heif"
 	"github.com/siyuan-note/siyuan/kernel/sql"
+	"github.com/siyuan-note/siyuan/kernel/tailscale"
 	"github.com/siyuan-note/siyuan/kernel/task"
 	"github.com/siyuan-note/siyuan/kernel/treenode"
 	"github.com/siyuan-note/siyuan/kernel/util"
@@ -576,7 +577,8 @@ func InitConf() {
 		logging.SetLogLevel(Conf.LogLevel)
 	}
 
-	util.SetNetworkProxy(Conf.System.Load().NetworkProxy.String(), Conf.System.Load().NetworkProxy.IsSystem())
+	applyNetworkProxy(Conf.System.Load().NetworkProxy)
+	tailscale.SetOnRunning(onTailscaleReady)
 
 	go util.InitPandoc(Conf.Export.Load().PandocBin)
 	go util.InitTesseract()

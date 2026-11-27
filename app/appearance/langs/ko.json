@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "관리자의 기기 승인을 기다리는 중",
+	"tailscaleKeyExpired": "로그인이 만료되었습니다. 다시 로그인하세요",
+	"tailscaleKeyExpiring": "기기 키가 ${date}에 만료됩니다",
+	"tailscaleSyncBlocked": "내장 Tailscale이 로그인되지 않아 동기화가 일시 중지되었습니다. 로그인하면 자동으로 재개됩니다",
+	"tailscaleSyncNetwork": "동기화 네트워크",
+	"tailscaleSyncNetworkDirect": "직접 연결",
+	"tailscaleSyncNetworkProxy": "프록시(내장 Tailscale)",
+	"tailscaleSyncNetworkTip": "S3/WebDAV 동기화는 직접 연결하거나 내장 Tailscale 노드를 통해 연결할 수 있습니다. 다른 트래픽에는 영향을 주지 않습니다",
 	"tailscaleClearAuthKey": "저장된 키 삭제",
 	"tailscaleAuthKeySaved": "저장됨, 비워 두면 현재 키를 유지합니다",
 	"tailscaleConfigError": "Tailscale 구성 오류",

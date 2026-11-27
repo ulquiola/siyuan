@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "في انتظار موافقة المسؤول على هذا الجهاز",
+	"tailscaleKeyExpired": "انتهت صلاحية تسجيل الدخول، يرجى تسجيل الدخول مرة أخرى",
+	"tailscaleKeyExpiring": "سينتهي مفتاح الجهاز في ${date}",
+	"tailscaleSyncBlocked": "Tailscale المضمّن غير مسجل الدخول؛ ستُستأنف المزامنة بعد تسجيل الدخول",
+	"tailscaleSyncNetwork": "شبكة المزامنة",
+	"tailscaleSyncNetworkDirect": "اتصال مباشر",
+	"tailscaleSyncNetworkProxy": "وكيل (Tailscale مضمّن)",
+	"tailscaleSyncNetworkTip": "يمكن لمزامنة S3/WebDAV الاتصال مباشرة أو عبر عقدة Tailscale المضمّنة؛ لا تتأثر حركة المرور الأخرى",
 	"tailscaleClearAuthKey": "مسح المفتاح المحفوظ",
 	"tailscaleAuthKeySaved": "تم الحفظ، اتركه فارغًا للاحتفاظ بالمفتاح الحالي",
 	"tailscaleConfigError": "خطأ في تكوين Tailscale",

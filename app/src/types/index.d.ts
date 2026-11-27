@@ -595,6 +595,14 @@ type ILanguages = {[key: string]: string} & {
     tailscaleError?: string;
     tailscaleConfigError?: string;
     tailscaleStartError?: string;
+    tailscaleSyncNetwork?: string;
+    tailscaleSyncNetworkDirect?: string;
+    tailscaleSyncNetworkProxy?: string;
+    tailscaleSyncNetworkTip?: string;
+    tailscaleNeedsMachineAuth?: string;
+    tailscaleKeyExpired?: string;
+    tailscaleKeyExpiring?: string;
+    tailscaleSyncBlocked?: string;
 };
 
 interface ISiyuan {

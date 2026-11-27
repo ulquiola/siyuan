@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Oczekiwanie na zatwierdzenie tego urządzenia przez administratora",
+	"tailscaleKeyExpired": "Sesja wygasła, zaloguj się ponownie",
+	"tailscaleKeyExpiring": "Klucz urządzenia wygasa ${date}",
+	"tailscaleSyncBlocked": "Wbudowany Tailscale nie jest zalogowany; synchronizacja wznowi się po zalogowaniu",
+	"tailscaleSyncNetwork": "Sieć synchronizacji",
+	"tailscaleSyncNetworkDirect": "Połączenie bezpośrednie",
+	"tailscaleSyncNetworkProxy": "Serwer proxy (wbudowany Tailscale)",
+	"tailscaleSyncNetworkTip": "Synchronizacja S3/WebDAV może łączyć się bezpośrednio lub przez wbudowany węzeł Tailscale; pozostały ruch pozostaje bez zmian",
 	"tailscaleClearAuthKey": "Wyczyść zapisany klucz",
 	"tailscaleAuthKeySaved": "Zapisano, pozostaw puste, aby zachować bieżący klucz",
 	"tailscaleConfigError": "Błąd konfiguracji Tailscale",

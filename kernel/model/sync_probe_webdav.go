@@ -18,9 +18,9 @@ import (
 	"time"
 
 	"github.com/siyuan-note/dejavu/cloud"
-	"github.com/siyuan-note/httpclient"
 	"github.com/siyuan-note/logging"
 	"github.com/siyuan-note/siyuan/kernel/conf"
+	"github.com/siyuan-note/siyuan/kernel/tailscale"
 	"github.com/siyuan-note/siyuan/kernel/util"
 	"github.com/studio-b12/gowebdav"
 )
@@ -40,7 +40,7 @@ func TestSyncProviderWebDAV(draft *conf.WebDAV, cloudName string) (kind, msg str
 	client.SetHeader("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(strings.TrimSpace(candidate.Username)+":"+strings.TrimSpace(candidate.Password))))
 	client.SetHeader("User-Agent", util.UserAgent)
 	client.SetTimeout(time.Duration(candidate.Timeout) * time.Second)
-	client.SetTransport(httpclient.NewTransport(candidate.SkipTlsVerify))
+	client.SetTransport(tailscale.NewSyncTransport(candidate.SkipTlsVerify))
 	info, err := client.Stat("/")
 	if err != nil {
 		return webDAVProbeFailure(err)

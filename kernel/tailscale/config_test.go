@@ -10,7 +10,12 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 )
+
+func boolPtr(value bool) *bool {
+	return &value
+}
 
 func writeConfig(t *testing.T, content string) string {
 	t.Helper()
@@ -238,5 +243,107 @@ func TestWriteConfigConcurrent(t *testing.T) {
 func TestStatusWithoutNode(t *testing.T) {
 	if status := Status(); "disabled" != status.State {
 		t.Fatalf("state = %q, want disabled", status.State)
+	}
+}
+
+func TestConfigNormalizeSyncNetwork(t *testing.T) {
+	enabled := true
+	disabled := false
+	for _, test := range []struct {
+		name    string
+		enabled *bool
+		want    string
+	}{{"enabled-default-proxy", &enabled, SyncNetworkProxy}, {"disabled-default-direct", &disabled, SyncNetworkDirect}} {
+		config := &Config{Enabled: test.enabled}
+		config.normalize(t.TempDir())
+		if config.SyncNetwork != test.want {
+			t.Fatalf("%s: SyncNetwork = %q, want %q", test.name, config.SyncNetwork, test.want)
+		}
+	}
+	config := &Config{Enabled: &enabled, SyncNetwork: SyncNetworkDirect}
+	config.normalize(t.TempDir())
+	if config.SyncNetwork != SyncNetworkDirect {
+		t.Fatalf("explicit direct should be preserved, got %q", config.SyncNetwork)
+	}
+}
+
+func TestConfigValidateSyncNetwork(t *testing.T) {
+	if err := (&Config{Listen: "127.0.0.1:1055", SyncNetwork: "bogus"}).validate(); nil == err {
+		t.Fatal("invalid syncNetwork should be rejected")
+	}
+}
+
+func TestNodeConfigChangedIgnoresSyncNetwork(t *testing.T) {
+	old := &Config{Enabled: boolPtr(true), Hostname: "a", Listen: "127.0.0.1:1055", StateDir: "s", SyncNetwork: SyncNetworkProxy}
+	next := *old
+	next.SyncNetwork = SyncNetworkDirect
+	if nodeConfigChanged(old, &next) {
+		t.Fatal("syncNetwork alone should not rebuild the node")
+	}
+	next.Hostname = "b"
+	if !nodeConfigChanged(old, &next) {
+		t.Fatal("hostname change should rebuild the node")
+	}
+}
+
+func TestSaveConfigSkipsApplyForSyncNetworkOnly(t *testing.T) {
+	configDir := t.TempDir()
+	initial := &Config{Enabled: boolPtr(true), Hostname: "node", Listen: "127.0.0.1:2055", AuthKey: "key"}
+	initial.normalize(configDir)
+	if err := writeConfigFile(configDir, initial); nil != err {
+		t.Fatalf("write initial config: %s", err)
+	}
+	applied := make(chan struct{}, 2)
+	applyConfig = func(string) { applied <- struct{}{} }
+	t.Cleanup(func() { applyConfig = Apply })
+
+	if err := SaveConfig(configDir, &Config{Enabled: boolPtr(true), Hostname: "node", Listen: "127.0.0.1:2055", AuthKey: "", SyncNetwork: SyncNetworkDirect}); nil != err {
+		t.Fatalf("save syncNetwork only: %s", err)
+	}
+	select {
+	case <-applied:
+		t.Fatal("syncNetwork only must not rebuild the node")
+	case <-time.After(20 * time.Millisecond):
+	}
+
+	if err := SaveConfig(configDir, &Config{Enabled: boolPtr(true), Hostname: "renamed", Listen: "127.0.0.1:2055", AuthKey: "", SyncNetwork: SyncNetworkDirect}); nil != err {
+		t.Fatalf("save hostname: %s", err)
+	}
+	select {
+	case <-applied:
+	case <-time.After(time.Second):
+		t.Fatal("hostname change should rebuild the node")
+	}
+}
+
+func TestIsEmbeddedProxy(t *testing.T) {
+	configDir := t.TempDir()
+	config := &Config{Enabled: boolPtr(true), Hostname: "node", Listen: "127.0.0.1:1055"}
+	config.normalize(configDir)
+	if err := writeConfigFile(configDir, config); nil != err {
+		t.Fatalf("write config: %s", err)
+	}
+	for _, test := range []struct {
+		proxy string
+		want  bool
+	}{
+		{"socks5://127.0.0.1:1055", true},
+		{"socks5://localhost:1055", true},
+		{"http://127.0.0.1:1055", false},
+		{"socks5://127.0.0.1:1080", false},
+		{"", false},
+	} {
+		if got := isEmbeddedProxy(configDir, test.proxy); got != test.want {
+			t.Fatalf("isEmbeddedProxy(%q) = %v, want %v", test.proxy, got, test.want)
+		}
+	}
+
+	disabled := &Config{Enabled: boolPtr(false), Hostname: "node", Listen: "127.0.0.1:1055"}
+	disabled.normalize(configDir)
+	if err := writeConfigFile(configDir, disabled); nil != err {
+		t.Fatalf("write disabled config: %s", err)
+	}
+	if !isEmbeddedProxy(configDir, "socks5://127.0.0.1:1055") {
+		t.Fatal("disabled node listener should still be recognized")
 	}
 }

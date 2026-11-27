@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "इस डिवाइस को एडमिन की स्वीकृति का इंतज़ार है",
+	"tailscaleKeyExpired": "लॉगिन समाप्त हो गया, कृपया फिर से साइन इन करें",
+	"tailscaleKeyExpiring": "डिवाइस कुंजी ${date} को समाप्त होगी",
+	"tailscaleSyncBlocked": "एम्बेडेड Tailscale साइन इन नहीं है; साइन इन करने के बाद सिंक फिर शुरू होगा",
+	"tailscaleSyncNetwork": "सिंक नेटवर्क",
+	"tailscaleSyncNetworkDirect": "सीधा कनेक्शन",
+	"tailscaleSyncNetworkProxy": "प्रॉक्सी (एम्बेडेड Tailscale)",
+	"tailscaleSyncNetworkTip": "S3/WebDAV सिंक सीधे या एम्बेडेड Tailscale नोड के माध्यम से कनेक्ट हो सकता है; अन्य ट्रैफ़िक प्रभावित नहीं होता",
 	"tailscaleClearAuthKey": "सहेजी गई कुंजी हटाएँ",
 	"tailscaleAuthKeySaved": "सहेजा गया, वर्तमान कुंजी रखने के लिए खाली छोड़ें",
 	"tailscaleConfigError": "Tailscale कॉन्फ़िगरेशन त्रुटि",

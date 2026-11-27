@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Wachten op goedkeuring van dit apparaat door een beheerder",
+	"tailscaleKeyExpired": "Sessie verlopen, meld opnieuw aan",
+	"tailscaleKeyExpiring": "Apparaatsleutel verloopt op ${date}",
+	"tailscaleSyncBlocked": "Ingebedde Tailscale is niet aangemeld; synchronisatie wordt hervat na aanmelden",
+	"tailscaleSyncNetwork": "Synchronisatienetwerk",
+	"tailscaleSyncNetworkDirect": "Directe verbinding",
+	"tailscaleSyncNetworkProxy": "Proxy (ingebedde Tailscale)",
+	"tailscaleSyncNetworkTip": "S3/WebDAV-synchronisatie kan rechtstreeks of via het ingebedde Tailscale-knooppunt verbinden; overig verkeer blijft ongewijzigd",
 	"tailscaleClearAuthKey": "Opgeslagen sleutel wissen",
 	"tailscaleAuthKeySaved": "Opgeslagen, laat leeg om de huidige sleutel te behouden",
 	"tailscaleConfigError": "Tailscale-configuratiefout",

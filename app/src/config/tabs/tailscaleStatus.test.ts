@@ -8,6 +8,8 @@ const languages = {
     tailscaleRunning: "已连接", tailscaleNeedsLogin: "需要登录", tailscaleStarting: "正在连接",
     tailscaleError: "错误", tailscaleDisabled: "未启用",
     tailscaleWaitingAuth: "正在等待登录链接，请检查网络或代理", tailscaleOpenLogin: "打开登录链接",
+    tailscaleNeedsMachineAuth: "等待管理员批准设备", tailscaleKeyExpired: "登录已过期，请重新登录",
+    tailscaleKeyExpiring: "设备密钥将于 ${date} 过期",
 };
 const status = (state: string, authURL = "", error = "") => ({state, authURL, ips: null as string[] | null, error});
 
@@ -159,4 +161,25 @@ test("applyTailscaleStatus 连接成功后移除链接", () => {
     assert.equal(element.querySelector("a"), null);
     assert.equal(element.textContent, "已连接");
     assert.equal(element.firstChild?.nodeValue, "已连接");
+});
+
+test("待管理员批准时不显示登录链接", () => {
+    const ret = load().describeTailscaleStatus({state: "needsMachineAuth", authURL: "https://login.tailscale.com/a/9",
+        ips: null, error: ""}, languages);
+    assert.equal(ret.text, "等待管理员批准设备");
+    assert.equal(ret.loginURL, "");
+});
+
+test("登录过期使用过期文案", () => {
+    const now = Date.parse("2026-11-27T00:00:00Z");
+    const ret = load().describeTailscaleStatus({state: "needsLogin", authURL: "", ips: null, error: "",
+        keyExpiry: "2026-11-01T00:00:00Z"}, languages, now);
+    assert.equal(ret.text, "登录已过期，请重新登录");
+});
+
+test("运行中且密钥 7 天内过期时追加提醒", () => {
+    const now = Date.parse("2026-11-27T00:00:00Z");
+    const ret = load().describeTailscaleStatus({state: "running", authURL: "", ips: null, error: "",
+        keyExpiry: "2026-12-01T00:00:00Z"}, languages, now);
+    assert.equal(ret.text, "已连接 · 设备密钥将于 2026-12-01 过期");
 });

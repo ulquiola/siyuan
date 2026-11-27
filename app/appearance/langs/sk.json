@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Čakanie na schválenie tohto zariadenia správcom",
+	"tailscaleKeyExpired": "Prihlásenie vypršalo, prihláste sa znova",
+	"tailscaleKeyExpiring": "Kľúč zariadenia vyprší ${date}",
+	"tailscaleSyncBlocked": "Vstavaný Tailscale nie je prihlásený; synchronizácia bude pokračovať po prihlásení",
+	"tailscaleSyncNetwork": "Synchronizačná sieť",
+	"tailscaleSyncNetworkDirect": "Priame pripojenie",
+	"tailscaleSyncNetworkProxy": "Proxy (vstavaný Tailscale)",
+	"tailscaleSyncNetworkTip": "Synchronizácia S3/WebDAV sa môže pripájať priamo alebo cez vstavaný uzol Tailscale; ostatná prevádzka nie je ovplyvnená",
 	"tailscaleClearAuthKey": "Vymazať uložený kľúč",
 	"tailscaleAuthKeySaved": "Uložené, ponechajte prázdne, ak chcete zachovať aktuálny kľúč",
 	"tailscaleConfigError": "Chyba konfigurácie Tailscale",

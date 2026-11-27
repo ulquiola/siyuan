@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Ожидание одобрения этого устройства администратором",
+	"tailscaleKeyExpired": "Срок входа истёк, войдите снова",
+	"tailscaleKeyExpiring": "Ключ устройства истекает ${date}",
+	"tailscaleSyncBlocked": "Встроенный Tailscale не авторизован; синхронизация возобновится после входа",
+	"tailscaleSyncNetwork": "Сеть синхронизации",
+	"tailscaleSyncNetworkDirect": "Прямое подключение",
+	"tailscaleSyncNetworkProxy": "Прокси (встроенный Tailscale)",
+	"tailscaleSyncNetworkTip": "Синхронизация S3/WebDAV может подключаться напрямую или через встроенный узел Tailscale; остальной трафик не затрагивается",
 	"tailscaleClearAuthKey": "Удалить сохранённый ключ",
 	"tailscaleAuthKeySaved": "Сохранён, оставьте пустым, чтобы сохранить текущий ключ",
 	"tailscaleConfigError": "Ошибка конфигурации Tailscale",

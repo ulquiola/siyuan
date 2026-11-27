@@ -15,6 +15,7 @@ import (
 	"github.com/siyuan-note/dejavu/cloud"
 	"github.com/siyuan-note/httpclient"
 	"github.com/siyuan-note/siyuan/kernel/conf"
+	"github.com/siyuan-note/siyuan/kernel/tailscale"
 	"github.com/siyuan-note/siyuan/kernel/util"
 )
 
@@ -88,7 +89,7 @@ func TestSyncProviderS3(s3 *conf.S3) (kind, msg string) {
 
 // newS3ProbeClient 使用候选配置构造独立客户端，复用同步路径的 SDK 选项与 HTTP 传输。
 func newS3ProbeClient(s3 *conf.S3) cloud.Cloud {
-	httpClient := httpclient.NewUserAgentClient(httpclient.NewTransport(s3.SkipTlsVerify))
+	httpClient := httpclient.NewUserAgentClient(tailscale.NewSyncTransport(s3.SkipTlsVerify))
 	httpClient.Timeout = time.Duration(s3.Timeout) * time.Second
 	return cloud.NewS3(&cloud.BaseCloud{Conf: &cloud.Conf{S3: &cloud.ConfS3{
 		Endpoint:       s3.Endpoint,

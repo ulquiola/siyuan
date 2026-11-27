@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Aguardando aprovação deste dispositivo por um administrador",
+	"tailscaleKeyExpired": "Login expirado, entre novamente",
+	"tailscaleKeyExpiring": "A chave do dispositivo expira em ${date}",
+	"tailscaleSyncBlocked": "O Tailscale integrado não está conectado; a sincronização será retomada após o login",
+	"tailscaleSyncNetwork": "Rede de sincronização",
+	"tailscaleSyncNetworkDirect": "Conexão direta",
+	"tailscaleSyncNetworkProxy": "Proxy (Tailscale integrado)",
+	"tailscaleSyncNetworkTip": "A sincronização S3/WebDAV pode conectar diretamente ou pelo nó Tailscale integrado; o restante do tráfego não é afetado",
 	"tailscaleClearAuthKey": "Limpar a chave salva",
 	"tailscaleAuthKeySaved": "Salva, deixe em branco para manter a chave atual",
 	"tailscaleConfigError": "Erro de configuração do Tailscale",

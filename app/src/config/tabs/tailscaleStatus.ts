@@ -5,6 +5,7 @@ export interface ITailscaleStatus {
     authURL: string;
     ips: string[] | null;
     error: string;
+    keyExpiry?: string;
 }
 
 export interface ITailscaleStatusView {
@@ -20,28 +21,53 @@ export interface ITailscaleLanguages {
     tailscaleDisabled: string;
     tailscaleWaitingAuth: string;
     tailscaleOpenLogin: string;
+    tailscaleNeedsMachineAuth: string;
+    tailscaleKeyExpired: string;
+    tailscaleKeyExpiring: string;
 }
+
+const keyExpiryWarningWindow = 7 * 24 * 60 * 60 * 1000;
+
+const parseKeyExpiry = (value?: string): Date | null => {
+    if (!value) {
+        return null;
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatKeyExpiryDate = (date: Date): string => date.toISOString().slice(0, 10);
 
 /**
  * 计算状态文案与登录链接。
  *
  * 已连接时文案附带 Tailnet 地址，且不再给出登录链接与错误；未连接时若有控制面错误，额外附上真实原因，
- * 等待登录类状态在没有认证地址时追加等待提示。
+ * 等待登录类状态在没有认证地址时追加等待提示。密钥过期与即将过期各自给出提示。
  */
-export const describeTailscaleStatus = (status: ITailscaleStatus,
-                                        languages: ITailscaleLanguages): ITailscaleStatusView => {
+export const describeTailscaleStatus = (status: ITailscaleStatus, languages: ITailscaleLanguages,
+                                        now = Date.now()): ITailscaleStatusView => {
+    const keyExpiry = parseKeyExpiry(status.keyExpiry);
     if ("running" === status.state) {
         const ips = status.ips?.length ? ` · ${status.ips.join(", ")}` : "";
-        return {text: `${languages.tailscaleRunning}${ips}`, loginURL: ""};
+        let text = `${languages.tailscaleRunning}${ips}`;
+        if (keyExpiry && keyExpiry.getTime() - now <= keyExpiryWarningWindow) {
+            text += ` · ${languages.tailscaleKeyExpiring.replace("${date}", formatKeyExpiryDate(keyExpiry))}`;
+        }
+        return {text, loginURL: ""};
+    }
+    if ("needsMachineAuth" === status.state) {
+        // 机器授权需要管理员在后台批准，重新登录不会解决问题，因此不给登录链接
+        return {text: languages.tailscaleNeedsMachineAuth, loginURL: ""};
     }
 
+    const expired = null != keyExpiry && keyExpiry.getTime() <= now;
     let text: string;
     switch (status.state) {
         case "starting":
             text = languages.tailscaleStarting;
             break;
         case "needsLogin":
-            text = languages.tailscaleNeedsLogin;
+            text = expired ? languages.tailscaleKeyExpired : languages.tailscaleNeedsLogin;
             break;
         case "error":
             text = languages.tailscaleError;
@@ -63,7 +89,7 @@ export const describeTailscaleStatus = (status: ITailscaleStatus,
     if (status.authURL) {
         return {text, loginURL: status.authURL};
     }
-    const waitingAuth = "starting" === status.state || "needsLogin" === status.state;
+    const waitingAuth = "starting" === status.state || ("needsLogin" === status.state && !expired);
     return {text: waitingAuth ? `${text} · ${languages.tailscaleWaitingAuth}` : text, loginURL: ""};
 };
 

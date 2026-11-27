@@ -59177,13 +59177,17 @@
         },
         "listen": {
           "type": "string"
+        },
+        "syncNetwork": {
+          "type": "string"
         }
       },
       "required": [
         "authKeySaved",
         "enabled",
         "hostname",
-        "listen"
+        "listen",
+        "syncNetwork"
       ],
       "additionalProperties": false
     },
@@ -59203,6 +59207,9 @@
           "type": "string"
         },
         "listen": {
+          "type": "string"
+        },
+        "syncNetwork": {
           "type": "string"
         }
       },
@@ -59253,6 +59260,9 @@
             }
           ]
         },
+        "keyExpiry": {
+          "type": "string"
+        },
         "state": {
           "type": "string"
         }
@@ -59261,6 +59271,7 @@
         "authURL",
         "error",
         "ips",
+        "keyExpiry",
         "state"
       ],
       "additionalProperties": false

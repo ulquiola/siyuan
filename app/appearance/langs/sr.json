@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Чека се одобрење овог уређаја од стране администратора",
+	"tailscaleKeyExpired": "Пријава је истекла, пријавите се поново",
+	"tailscaleKeyExpiring": "Кључ уређаја истиче ${date}",
+	"tailscaleSyncBlocked": "Уграђени Tailscale није пријављен; синхронизација ће се наставити после пријаве",
+	"tailscaleSyncNetwork": "Мрежа синхронизације",
+	"tailscaleSyncNetworkDirect": "Директна веза",
+	"tailscaleSyncNetworkProxy": "Прокси (уграђени Tailscale)",
+	"tailscaleSyncNetworkTip": "Синхронизација S3/WebDAV може да се повеже директно или преко уграђеног Tailscale чвора; остали саобраћај није погођен",
 	"tailscaleClearAuthKey": "Обриши сачувани кључ",
 	"tailscaleAuthKeySaved": "Сачувано, оставите празно да задржите тренутни кључ",
 	"tailscaleConfigError": "Грешка у конфигурацији Tailscale",

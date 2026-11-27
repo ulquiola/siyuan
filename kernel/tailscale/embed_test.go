@@ -114,6 +114,17 @@ func TestStatusFromState(t *testing.T) {
 		t.Fatalf("unexpected login status: %#v", needsLogin)
 	}
 
+	needsAuth := statusFromState(&ipnstate.Status{BackendState: "NeedsMachineAuth"})
+	if "needsMachineAuth" != needsAuth.State {
+		t.Fatalf("unexpected machine auth status: %#v", needsAuth)
+	}
+
+	expiry := time.Now().Add(24 * time.Hour).UTC()
+	keyExpiring := statusFromState(&ipnstate.Status{BackendState: "Running", Self: &ipnstate.PeerStatus{KeyExpiry: &expiry}})
+	if expiry.Format(time.RFC3339) != keyExpiring.KeyExpiry {
+		t.Fatalf("unexpected key expiry: %q, want %q", keyExpiring.KeyExpiry, expiry.Format(time.RFC3339))
+	}
+
 	invalid := statusFromState(&ipnstate.Status{BackendState: "Invalid", Health: []string{"backend error"}})
 	if "error" != invalid.State || "Invalid: backend error" != invalid.Error {
 		t.Fatalf("unexpected invalid status: %#v", invalid)

@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "Bu cihazın yönetici tarafından onaylanması bekleniyor",
+	"tailscaleKeyExpired": "Oturum süresi doldu, lütfen tekrar giriş yapın",
+	"tailscaleKeyExpiring": "Cihaz anahtarı ${date} tarihinde sona eriyor",
+	"tailscaleSyncBlocked": "Gömülü Tailscale oturum açmamış; eşitleme giriş yapıldıktan sonra devam edecek",
+	"tailscaleSyncNetwork": "Eşitleme ağı",
+	"tailscaleSyncNetworkDirect": "Doğrudan bağlantı",
+	"tailscaleSyncNetworkProxy": "Proxy (gömülü Tailscale)",
+	"tailscaleSyncNetworkTip": "S3/WebDAV eşitlemesi doğrudan veya gömülü Tailscale düğümü üzerinden bağlanabilir; diğer trafik etkilenmez",
 	"tailscaleClearAuthKey": "Kaydedilen anahtarı temizle",
 	"tailscaleAuthKeySaved": "Kaydedildi, mevcut anahtarı korumak için boş bırakın",
 	"tailscaleConfigError": "Tailscale yapılandırma hatası",

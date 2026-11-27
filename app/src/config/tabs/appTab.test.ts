@@ -45,6 +45,9 @@ const getAccessibilitySlot = (browser: boolean, mobile: boolean, invoke?: Invoke
             if (name === "../../util/escape") {
                 return {escapeHtmlTextAndAttr};
             }
+            if (name === "./tailscaleSyncNetwork") {
+                return {normalizeSyncNetwork: (value: unknown): "direct" | "proxy" => "proxy" === value ? "proxy" : "direct"};
+            }
             if (name === "../../util/fetch" && fetchPost) {
                 return {fetchPost};
             }
@@ -202,6 +205,7 @@ const tailscaleControls = () => {
         "#tailscaleEnabled": element("#tailscaleEnabled"),
         "#tailscaleHostname": element("#tailscaleHostname"),
         "#tailscaleListen": element("#tailscaleListen"),
+        "#tailscaleSyncNetwork": element("#tailscaleSyncNetwork"),
         "#tailscaleAuthKey": element("#tailscaleAuthKey"),
         "#tailscaleStatus": element("#tailscaleStatus"),
         "#tailscaleConfirm": element("#tailscaleConfirm"),
@@ -219,7 +223,7 @@ test("tailscale settings keep the saved key hidden and can clear it", async () =
         callback?.({
             code: 0,
             data: {
-                config: {enabled: true, hostname: "node", authKeySaved: !cleared, listen: "127.0.0.1:1055"},
+                config: {enabled: true, hostname: "node", authKeySaved: !cleared, listen: "127.0.0.1:1055", syncNetwork: "proxy"},
                 status: {state: "disabled", authURL: "", ips: null, error: ""},
             },
         });
@@ -231,6 +235,7 @@ test("tailscale settings keep the saved key hidden and can clear it", async () =
     await slot.afterMount(view.root);
 
     assert.equal(view.elements["#tailscaleAuthKey"].value, "");
+    assert.equal(view.elements["#tailscaleSyncNetwork"].value, "proxy");
     assert.equal(view.elements["#tailscaleAuthKey"].placeholder, "tailscaleAuthKeySaved");
     assert.equal(view.hidden["#tailscaleClearAuthKey"], false);
 
@@ -239,6 +244,7 @@ test("tailscale settings keep the saved key hidden and can clear it", async () =
     const saveCall = calls.find(call => "/api/system/setTailscale" === call.url);
     assert.ok(saveCall);
     assert.equal(saveCall.data.clearAuthKey, true);
+    assert.equal(saveCall.data.syncNetwork, "proxy");
     assert.equal(view.hidden["#tailscaleClearAuthKey"], true);
 });
 

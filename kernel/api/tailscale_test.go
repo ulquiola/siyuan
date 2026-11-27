@@ -49,3 +49,24 @@ func TestTailscaleDataDoesNotExposeSavedAuthKey(t *testing.T) {
 		t.Fatal("missing config should not report a saved auth key")
 	}
 }
+
+func TestTailscaleDataReportsSyncNetworkAndKeyExpiry(t *testing.T) {
+	oldHomeDir := util.HomeDir
+	util.HomeDir = t.TempDir()
+	t.Cleanup(func() { util.HomeDir = oldHomeDir })
+	configDir := tailscale.ConfigDir()
+	if err := os.MkdirAll(configDir, 0755); nil != err {
+		t.Fatalf("create config dir: %s", err)
+	}
+	configPath := filepath.Join(configDir, "tailscale.json")
+	if err := os.WriteFile(configPath, []byte(`{"enabled":true,"listen":"127.0.0.1:2055","syncNetwork":"direct"}`), 0600); nil != err {
+		t.Fatalf("write config: %s", err)
+	}
+	data := tailscaleData()
+	if "direct" != data.Config.SyncNetwork {
+		t.Fatalf("syncNetwork = %q, want direct", data.Config.SyncNetwork)
+	}
+	if "" != data.Status.KeyExpiry {
+		t.Fatalf("keyExpiry = %q, want empty for a node without status", data.Status.KeyExpiry)
+	}
+}

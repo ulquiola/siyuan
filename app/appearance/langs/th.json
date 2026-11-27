@@ -1,4 +1,12 @@
 {
+	"tailscaleNeedsMachineAuth": "กำลังรอผู้ดูแลระบบอนุมัติอุปกรณ์นี้",
+	"tailscaleKeyExpired": "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง",
+	"tailscaleKeyExpiring": "คีย์อุปกรณ์จะหมดอายุใน ${date}",
+	"tailscaleSyncBlocked": "Tailscale ที่ฝังอยู่ยังไม่ได้เข้าสู่ระบบ การซิงค์จะกลับมาทำงานหลังเข้าสู่ระบบ",
+	"tailscaleSyncNetwork": "เครือข่ายการซิงค์",
+	"tailscaleSyncNetworkDirect": "เชื่อมต่อโดยตรง",
+	"tailscaleSyncNetworkProxy": "พร็อกซี (Tailscale ที่ฝังอยู่)",
+	"tailscaleSyncNetworkTip": "การซิงค์ S3/WebDAV สามารถเชื่อมต่อโดยตรงหรือผ่านโหนด Tailscale ที่ฝังอยู่ได้ โดยไม่กระทบการรับส่งข้อมูลอื่น",
 	"tailscaleClearAuthKey": "ลบคีย์ที่บันทึกไว้",
 	"tailscaleAuthKeySaved": "บันทึกแล้ว เว้นว่างไว้เพื่อใช้คีย์ปัจจุบัน",
 	"tailscaleConfigError": "ข้อผิดพลาดการกำหนดค่า Tailscale",

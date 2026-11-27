@@ -29,7 +29,8 @@ func pushSyncNotice(msg string, code, closeTimeout int) SyncErrorNotice {
 }
 
 func pushSyncError(msg string, err error) error {
-	if msg == "" {
+	if msg == "" || syncBlocked() {
+		// 节点未登录/待批准时由 tailscaleSyncNotice 统一提示，避免同一失败出现两条常驻通知
 		return err
 	}
 	return notifiedSyncError{err, pushSyncNotice(msg, -1, 0)}
